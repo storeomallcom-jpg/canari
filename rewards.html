@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="theme-color" content="#0A0E1A"/>
+<title>ربحي — المكافآت والإحالة</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+/* ══════════ DESIGN TOKENS ══════════ */
+:root {
+  --ink:      #0A0E1A;
+  --ink-2:    #111827;
+  --ink-3:    #1C2536;
+  --teal:     #00D4B8;
+  --teal-dim: #00A896;
+  --gold:     #F5A623;
+  --gold-dim: #C8841A;
+  --red:      #FF4D6D;
+  --purple:   #A855F7;
+  --text:     #E8F0FF;
+  --muted:    #6B7A99;
+  --border:   rgba(255,255,255,0.07);
+  --glass:    rgba(28,37,54,0.8);
+  --safe-bot: env(safe-area-inset-bottom, 0px);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body {
+  font-family: 'Cairo', sans-serif;
+  background: var(--ink);
+  color: var(--text);
+  min-height:100vh; min-height:100dvh;
+  overflow-x:hidden;
+  padding-bottom: calc(72px + var(--safe-bot));
+}
+
+/* BG — purple/gold for rewards page */
+.bg-rewards {
+  position:fixed; inset:0; z-index:0; pointer-events:none;
+  background:
+    radial-gradient(ellipse 60% 55% at 80% 0%,   rgba(168,85,247,0.12) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 45% at 10% 100%,  rgba(245,166,35,0.10) 0%, transparent 55%),
+    radial-gradient(ellipse 40% 30% at 50% 50%,   rgba(0,212,184,0.05) 0%, transparent 55%);
+}
+.bg-rewards::after {
+  content:''; position:absolute; inset:0;
+  background-image:
+    linear-gradient(rgba(168,85,247,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(168,85,247,0.025) 1px, transparent 1px);
+  background-size:44px 44px;
+}
+
+/* CARDS */
+.card{background:var(--glass);border:1px solid var(--border);border-radius:20px;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+
+/* TEXT */
+.grad-text{background:linear-gradient(135deg,var(--gold) 0%,var(--purple) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.grad-text-2{background:linear-gradient(135deg,var(--teal) 0%,var(--gold) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.teal{color:var(--teal)} .gold{color:var(--gold)} .muted{color:var(--muted)} .purple{color:var(--purple)}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:13px 24px;border-radius:14px;font-family:'Cairo',sans-serif;font-size:15px;font-weight:700;border:none;cursor:pointer;transition:transform 0.2s,box-shadow 0.2s;-webkit-tap-highlight-color:transparent}
+.btn:active{transform:scale(0.97)}
+.btn:disabled{opacity:0.45;pointer-events:none}
+.btn-gold{background:linear-gradient(135deg,var(--gold),var(--gold-dim));color:#0A0E1A;font-weight:800;box-shadow:0 4px 20px rgba(245,166,35,0.3)}
+.btn-gold:hover{box-shadow:0 8px 30px rgba(245,166,35,0.45);transform:translateY(-1px)}
+.btn-teal{background:linear-gradient(135deg,var(--teal),var(--teal-dim));color:#fff;box-shadow:0 4px 20px rgba(0,212,184,0.3)}
+.btn-teal:hover{box-shadow:0 8px 30px rgba(0,212,184,0.45);transform:translateY(-1px)}
+.btn-purple{background:linear-gradient(135deg,var(--purple),#8B5CF6);color:#fff;box-shadow:0 4px 20px rgba(168,85,247,0.3)}
+.btn-purple:hover{box-shadow:0 8px 30px rgba(168,85,247,0.45);transform:translateY(-1px)}
+.btn-ghost{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);color:var(--text)}
+.btn-ghost:hover{border-color:var(--gold);color:var(--gold)}
+.btn-full{width:100%}
+
+/* INPUTS */
+.field{width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.09);border-radius:12px;padding:13px 16px;color:var(--text);font-family:'Cairo',sans-serif;font-size:15px;outline:none;transition:border-color 0.25s,box-shadow 0.25s;-webkit-appearance:none}
+.field:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(245,166,35,0.12)}
+.field::placeholder{color:var(--muted);font-size:14px}
+.field-label{display:block;font-size:12px;color:var(--muted);margin-bottom:7px;font-weight:600;letter-spacing:0.3px}
+
+/* NAV */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;z-index:200;background:rgba(10,14,26,0.96);border-top:1px solid var(--border);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);padding-bottom:var(--safe-bot);display:flex}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:10px 6px 8px;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:color 0.2s;text-decoration:none;color:var(--muted);font-size:10px;font-weight:700;font-family:'Cairo',sans-serif}
+.nav-item .nav-icon{width:28px;height:28px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;transition:background 0.2s,transform 0.2s}
+.nav-item.active{color:var(--purple)}
+.nav-item.active .nav-icon{background:rgba(168,85,247,0.15);transform:translateY(-2px)}
+
+/* TOP BAR */
+.top-bar{position:sticky;top:0;z-index:100;background:rgba(10,14,26,0.92);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;justify-content:space-between}
+
+/* TOKEN CHIP */
+.token-chip{display:inline-flex;align-items:center;gap:5px;background:rgba(245,166,35,0.12);border:1px solid rgba(245,166,35,0.3);border-radius:20px;padding:5px 12px;font-size:12px;font-weight:700;color:var(--gold)}
+
+/* TOAST */
+#toast{position:fixed;bottom:calc(85px + var(--safe-bot));left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink-3);border:1px solid var(--border);border-radius:12px;padding:12px 22px;font-size:13px;font-weight:600;z-index:1000;white-space:nowrap;opacity:0;transition:all 0.35s cubic-bezier(.34,1.4,.64,1);pointer-events:none}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* HERO TOKEN DISPLAY */
+.token-hero{
+  background: linear-gradient(135deg, rgba(245,166,35,0.15), rgba(168,85,247,0.10));
+  border: 1px solid rgba(245,166,35,0.25);
+  border-radius: 24px; padding: 28px 24px;
+  text-align: center; position: relative; overflow: hidden;
+}
+.token-hero::before {
+  content:''; position:absolute; inset:0;
+  background: radial-gradient(ellipse 80% 80% at 50% 50%, rgba(245,166,35,0.08), transparent 70%);
+}
+.token-big {
+  font-size: 5rem; font-weight: 900; line-height: 1;
+  background: linear-gradient(135deg, var(--gold), var(--purple));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* LINK BOX */
+.link-box {
+  background: rgba(255,255,255,0.03);
+  border: 1px dashed rgba(245,166,35,0.3);
+  border-radius: 14px; padding: 14px 16px;
+  font-family: monospace; font-size: 13px;
+  color: var(--teal); word-break: break-all;
+  cursor: pointer; transition: background 0.2s, border-color 0.2s;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+.link-box:hover { background: rgba(245,166,35,0.06); border-color: rgba(245,166,35,0.5); }
+.link-box .copy-icon { font-size:18px; flex-shrink:0; }
+
+/* HOW IT WORKS STEPS */
+.step { display:flex; align-items:flex-start; gap:16px; padding:16px 0; border-bottom:1px solid var(--border); }
+.step:last-child { border-bottom:none; }
+.step-num {
+  width:36px; height:36px; border-radius:50%; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  font-size:14px; font-weight:900;
+}
+.step-num.s1 { background:rgba(245,166,35,0.15); color:var(--gold); border:1px solid rgba(245,166,35,0.3); }
+.step-num.s2 { background:rgba(0,212,184,0.15); color:var(--teal); border:1px solid rgba(0,212,184,0.3); }
+.step-num.s3 { background:rgba(168,85,247,0.15); color:var(--purple); border:1px solid rgba(168,85,247,0.3); }
+
+/* HISTORY TABLE */
+.hist-table { width:100%; border-collapse:collapse; }
+.hist-table th { font-size:11px; color:var(--muted); font-weight:700; padding:10px 12px; text-align:right; border-bottom:1px solid var(--border); letter-spacing:0.3px; }
+.hist-table td { padding:12px 12px; font-size:13px; border-bottom:1px solid rgba(255,255,255,0.04); }
+.hist-table tr:last-child td { border-bottom:none; }
+.badge { padding:3px 10px; border-radius:8px; font-size:11px; font-weight:700; }
+.badge-earn { background:rgba(0,212,184,0.12); color:var(--teal); border:1px solid rgba(0,212,184,0.25); }
+.badge-use  { background:rgba(255,77,109,0.10); color:var(--red);  border:1px solid rgba(255,77,109,0.2); }
+.badge-ref  { background:rgba(168,85,247,0.12); color:var(--purple); border:1px solid rgba(168,85,247,0.25); }
+
+/* SHARE PLATFORMS */
+.share-btn {
+  flex:1; display:flex; flex-direction:column; align-items:center; gap:6px;
+  padding:14px 8px; border-radius:14px;
+  border:1px solid var(--border); background:rgba(255,255,255,0.03);
+  cursor:pointer; transition:all 0.2s; -webkit-tap-highlight-color:transparent;
+  font-size:11px; font-weight:700; color:var(--muted);
+}
+.share-btn:hover { border-color:rgba(255,255,255,0.2); color:var(--text); background:rgba(255,255,255,0.06); }
+.share-btn:active { transform:scale(0.96); }
+.share-btn .sicon { font-size:24px; }
+
+/* PROGRESS BAR */
+.prog-bar { height:8px; background:rgba(255,255,255,0.07); border-radius:4px; overflow:hidden; }
+.prog-fill { height:100%; border-radius:4px; background:linear-gradient(90deg,var(--gold),var(--purple)); transition:width 1s cubic-bezier(.34,1.4,.64,1); }
+
+/* AUTH GATE */
+.auth-gate { text-align:center; padding:40px 24px; }
+
+/* ANIMATIONS */
+@keyframes fade-up { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+.fade-up{animation:fade-up 0.5s ease forwards;opacity:0}
+.d1{animation-delay:0.05s}.d2{animation-delay:0.1s}.d3{animation-delay:0.15s}.d4{animation-delay:0.2s}.d5{animation-delay:0.25s}.d6{animation-delay:0.3s}
+
+@keyframes float-coin { 0%,100%{transform:translateY(0) rotate(0deg)} 50%{transform:translateY(-8px) rotate(5deg)} }
+.float-coin { animation:float-coin 3s ease-in-out infinite; }
+
+@keyframes shimmer { 0%,100%{opacity:0.6} 50%{opacity:1} }
+.shimmer { animation:shimmer 2s ease-in-out infinite; }
+
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:2px}
+
+/* LOADING SKELETON */
+.skeleton { background:linear-gradient(90deg,rgba(255,255,255,0.04) 25%,rgba(255,255,255,0.08) 50%,rgba(255,255,255,0.04) 75%); background-size:200% 100%; animation:skeleton-shimmer 1.5s infinite; border-radius:8px; }
+@keyframes skeleton-shimmer { 0%{background-position:200%} 100%{background-position:-200%} }
+
+/* DESKTOP SIDEBAR */
+@media(min-width:768px){
+  body{padding-bottom:0}
+  .bottom-nav{display:none}
+  .desktop-sidebar{position:fixed;top:0;right:0;bottom:0;width:240px;background:rgba(10,14,26,0.98);border-left:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;backdrop-filter:blur(20px)}
+  .main-content{margin-right:240px}
+}
+@media(max-width:767px){ .desktop-sidebar{display:none} .main-content{margin-right:0} }
+
+/* SECTION HEAD */
+.section-head{font-size:12px;font-weight:800;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:12px;padding-right:4px}
+</style>
+</head>
+<body>
+<div class="bg-rewards"></div>
+<div id="toast"></div>
+
+<!-- DESKTOP SIDEBAR -->
+<div class="desktop-sidebar">
+  <div class="px-6 mb-8">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-xl flex items-center justify-center text-xl font-black" style="background:linear-gradient(135deg,var(--teal),var(--gold));border-radius:11px">ر</div>
+      <span class="text-lg font-black grad-text-2">ربحي</span>
+    </div>
+  </div>
+  <div class="flex-1 px-3 space-y-1">
+    <a href="index.html"    class="flex items-center gap-3 px-4 py-3 text-sm transition-all hover:bg-white/5" style="border-radius:12px;color:var(--muted);font-weight:600"><span class="text-lg">📊</span> لوحة التحكم</a>
+    <a href="settings.html" class="flex items-center gap-3 px-4 py-3 text-sm transition-all hover:bg-white/5" style="border-radius:12px;color:var(--muted);font-weight:600"><span class="text-lg">⚙️</span> الإعدادات</a>
+    <a href="rewards.html"  class="flex items-center gap-3 px-4 py-3 text-sm" style="border-radius:12px;background:rgba(168,85,247,0.12);color:var(--purple);font-weight:700"><span class="text-lg">🎁</span> المكافآت</a>
+  </div>
+  <div class="px-6 mt-4">
+    <div class="token-chip w-full justify-center mb-4" id="sdkTokens">🪙 — رصيد</div>
+    <div class="text-xs muted text-center mb-3" id="sdkInfo"></div>
+    <button onclick="doSignOut()" id="sdkOut" class="hidden btn btn-full text-xs py-2" style="background:transparent;border:1px solid rgba(255,77,109,0.3);color:var(--red);border-radius:14px;font-family:'Cairo',sans-serif;cursor:pointer">خروج</button>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main-content relative z-10">
+
+  <!-- TOP BAR -->
+  <div class="top-bar">
+    <div class="flex items-center gap-3">
+      <a href="index.html" class="flex items-center justify-content" style="display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);font-size:18px;text-decoration:none">←</a>
+      <div>
+        <h1 class="text-base font-black">المكافآت</h1>
+        <p style="font-size:11px" class="muted">محرك النمو 🚀</p>
+      </div>
+    </div>
+    <div class="token-chip" id="topTokens">🪙 — رصيد</div>
+  </div>
+
+  <!-- ═══ AUTH GATE (shown when not logged in) ═══ -->
+  <div id="authGate" class="px-4 py-10">
+    <div class="auth-gate card p-8">
+      <div class="text-5xl mb-4 float-coin">🎁</div>
+      <h2 class="text-2xl font-black mb-3">سجّل دخولك</h2>
+      <p class="muted text-sm leading-relaxed mb-6">للوصول إلى برنامج الإحالة وتتبع رصيدك ومكافآتك</p>
+      <a href="index.html" class="btn btn-gold btn-full py-3">تسجيل الدخول ←</a>
+    </div>
+  </div>
+
+  <!-- ═══ MAIN REWARDS CONTENT ═══ -->
+  <div id="rewardsContent" class="hidden px-4 py-5 space-y-6">
+
+    <!-- Token Hero -->
+    <div class="token-hero fade-up d1">
+      <div class="relative z-10">
+        <div class="text-sm muted mb-2 font-600 shimmer">رصيدك الحالي</div>
+        <div class="token-big" id="heroTokens">0</div>
+        <div class="text-sm muted mt-2">استشارة ذكاء اصطناعي متبقية</div>
+        <div class="mt-4 flex justify-center gap-6 text-sm">
+          <div class="text-center">
+            <div class="font-900 text-base" id="totalEarned" style="color:var(--teal)">0</div>
+            <div class="muted text-xs">مكتسب</div>
+          </div>
+          <div style="width:1px;background:var(--border)"></div>
+          <div class="text-center">
+            <div class="font-900 text-base" id="totalUsed" style="color:var(--red)">0</div>
+            <div class="muted text-xs">مستخدم</div>
+          </div>
+          <div style="width:1px;background:var(--border)"></div>
+          <div class="text-center">
+            <div class="font-900 text-base" id="totalRefs" style="color:var(--purple)">0</div>
+            <div class="muted text-xs">إحالة</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Progress to next milestone -->
+    <div class="card p-5 fade-up d2">
+      <div class="flex justify-between items-center mb-3">
+        <span class="text-sm font-800">الوصول لـ 500 رصيد</span>
+        <span class="text-xs purple font-700" id="milestoneStatus">0 / 500</span>
+      </div>
+      <div class="prog-bar"><div class="prog-fill" id="milestoneProg" style="width:0%"></div></div>
+      <p class="text-xs muted mt-2">ادعُ أصدقاء للوصول لمكافأة 50 رصيد إضافي</p>
+    </div>
+
+    <!-- Referral Link -->
+    <div class="fade-up d2">
+      <p class="section-head">🔗 رابط الإحالة الخاص بك</p>
+      <div class="card p-5">
+        <div class="link-box mb-4" id="refLinkBox" onclick="copyLink()">
+          <span id="refLinkText" class="flex-1 truncate">جارٍ التحميل...</span>
+          <span class="copy-icon">📋</span>
+        </div>
+        <p class="text-xs muted mb-4 text-center">كل صديق يسجّل برابطك ← أنت وهو تحصلان على <strong class="gold">50 رصيد</strong> كل واحد</p>
+
+        <!-- Share buttons -->
+        <div class="flex gap-3">
+          <button class="share-btn" onclick="shareWA()">
+            <span class="sicon">💬</span>
+            <span>واتساب</span>
+          </button>
+          <button class="share-btn" onclick="shareCopy()">
+            <span class="sicon">📋</span>
+            <span>نسخ</span>
+          </button>
+          <button class="share-btn" onclick="shareNative()">
+            <span class="sicon">📤</span>
+            <span>مشاركة</span>
+          </button>
+          <button class="share-btn" onclick="shareFB()">
+            <span class="sicon">📘</span>
+            <span>فيسبوك</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- How it works -->
+    <div class="fade-up d3">
+      <p class="section-head">❓ كيف يعمل البرنامج</p>
+      <div class="card p-5">
+        <div class="step">
+          <div class="step-num s1">1</div>
+          <div>
+            <h4 class="text-sm font-800 mb-1">انسخ رابطك الخاص</h4>
+            <p class="text-xs muted leading-relaxed">كل مستخدم عنده رابط فريد مرتبط بكوده. شاركه مع التجار المغاربة.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num s2">2</div>
+          <div>
+            <h4 class="text-sm font-800 mb-1">صاحبك يسجّل ويبدأ</h4>
+            <p class="text-xs muted leading-relaxed">حين يضغط صاحبك رابطك ويفتح حساباً، النظام يربط التسجيل بك تلقائياً.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num s3">3</div>
+          <div>
+            <h4 class="text-sm font-800 mb-1">أنت وهو تربحون <span class="gold">50 رصيد</span></h4>
+            <p class="text-xs muted leading-relaxed">فوراً بعد التسجيل، يُضاف 50 رصيد لحسابه (فوق المجاني) و50 رصيد لك. بدون حدود عدد الإحالات!</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Manual referral input -->
+    <div class="fade-up d3">
+      <p class="section-head">✍️ لديك كود إحالة؟</p>
+      <div class="card p-5">
+        <p class="text-xs muted mb-4">إذا نسيت استخدام كود صديقك وقت التسجيل، يمكنك إدخاله هنا (مرة واحدة فقط)</p>
+        <div class="flex gap-3">
+          <input type="text" id="manualRef" class="field flex-1" placeholder="REF-XXXXXX" style="text-transform:uppercase"/>
+          <button class="btn btn-teal" onclick="applyManualRef()" style="white-space:nowrap;flex-shrink:0">تطبيق</button>
+        </div>
+        <p class="text-xs mt-3" id="manualRefStatus" style="color:var(--muted)"></p>
+      </div>
+    </div>
+
+    <!-- Referral Stats -->
+    <div class="fade-up d4">
+      <div class="flex justify-between items-center mb-3">
+        <p class="section-head" style="margin-bottom:0">📊 إحالاتي</p>
+        <span class="text-xs muted" id="refCount">0 إحالة</span>
+      </div>
+      <div class="card p-5">
+        <div class="grid grid-cols-3 gap-4 text-center mb-5">
+          <div>
+            <div class="text-2xl font-900 gold" id="statTotalRefs">0</div>
+            <div class="text-xs muted mt-1">إجمالي الإحالات</div>
+          </div>
+          <div style="border-right:1px solid var(--border);border-left:1px solid var(--border)">
+            <div class="text-2xl font-900" style="color:var(--teal)" id="statEarnedTokens">0</div>
+            <div class="text-xs muted mt-1">رصيد مكتسب</div>
+          </div>
+          <div>
+            <div class="text-2xl font-900 purple" id="statPending">0</div>
+            <div class="text-xs muted mt-1">في الانتظار</div>
+          </div>
+        </div>
+        <!-- Mini list of referrals -->
+        <div id="refList">
+          <div class="skeleton" style="height:40px;margin-bottom:8px"></div>
+          <div class="skeleton" style="height:40px;margin-bottom:8px;opacity:0.6"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Token History Table -->
+    <div class="fade-up d5">
+      <div class="flex justify-between items-center mb-3">
+        <p class="section-head" style="margin-bottom:0">📜 سجل الرصيد</p>
+        <button class="btn btn-ghost text-xs py-1 px-3" style="font-size:11px;padding:5px 12px" onclick="loadHistory()">تحديث 🔄</button>
+      </div>
+      <div class="card" style="overflow:hidden">
+        <div style="overflow-x:auto">
+          <table class="hist-table">
+            <thead>
+              <tr>
+                <th>النوع</th>
+                <th>التفاصيل</th>
+                <th>الرصيد</th>
+                <th>التاريخ</th>
+              </tr>
+            </thead>
+            <tbody id="histBody">
+              <tr><td colspan="4">
+                <div class="text-center py-8">
+                  <div class="skeleton mx-auto" style="height:16px;width:160px;margin-bottom:8px"></div>
+                  <div class="skeleton mx-auto" style="height:16px;width:120px;opacity:0.6"></div>
+                </div>
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Rewards Catalog -->
+    <div class="fade-up d6">
+      <p class="section-head">🏆 مستويات التاجر</p>
+      <div class="space-y-3">
+        <div class="card p-4 flex items-center gap-4" id="lvl1">
+          <div class="text-3xl">🥉</div>
+          <div class="flex-1">
+            <h4 class="font-800 text-sm">تاجر مبتدئ</h4>
+            <p class="text-xs muted">100 رصيد — مرحباً بك!</p>
+          </div>
+          <div class="text-xs teal font-700" id="lvl1Status">✓ محقق</div>
+        </div>
+        <div class="card p-4 flex items-center gap-4" id="lvl2" style="opacity:0.6">
+          <div class="text-3xl">🥈</div>
+          <div class="flex-1">
+            <h4 class="font-800 text-sm">تاجر نشط</h4>
+            <p class="text-xs muted">5 إحالات = +250 رصيد</p>
+          </div>
+          <div class="text-xs font-700 muted" id="lvl2Status">0/5</div>
+        </div>
+        <div class="card p-4 flex items-center gap-4" id="lvl3" style="opacity:0.5">
+          <div class="text-3xl">🥇</div>
+          <div class="flex-1">
+            <h4 class="font-800 text-sm">تاجر ذهبي</h4>
+            <p class="text-xs muted">20 إحالة = +1000 رصيد</p>
+          </div>
+          <div class="text-xs font-700 muted" id="lvl3Status">0/20</div>
+        </div>
+        <div class="card p-4 flex items-center gap-4" id="lvl4" style="opacity:0.4">
+          <div class="text-3xl">💎</div>
+          <div class="flex-1">
+            <h4 class="font-800 text-sm">شريك ربحي</h4>
+            <p class="text-xs muted">50 إحالة = عمولة دائمة 🤫</p>
+          </div>
+          <div class="text-xs font-700 muted" id="lvl4Status">0/50</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom spacing -->
+    <div style="height:20px"></div>
+
+  </div>
+</div><!-- /main-content -->
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav md:hidden">
+  <a href="index.html"    class="nav-item"><div class="nav-icon">📊</div><span>الرئيسية</span></a>
+  <a href="index.html"    class="nav-item"><div class="nav-icon">🧮</div><span>الحاسبة</span></a>
+  <a href="settings.html" class="nav-item"><div class="nav-icon">⚙️</div><span>الإعدادات</span></a>
+  <a href="rewards.html"  class="nav-item active"><div class="nav-icon">🎁</div><span>المكافآت</span></a>
+</nav>
+
+<script>
+// ══════════════════════════════════════════
+// ⚙️ CONFIG
+// ══════════════════════════════════════════
+const SUPABASE_URL  = 'https://YOUR_PROJECT.supabase.co';
+const SUPABASE_ANON = 'YOUR_ANON_KEY';
+const GROQ_API_KEY  = 'YOUR_GROQ_API_KEY';
+
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON);
+
+let currentUser = null;
+let userProfile = null;
+let refCode     = null;
+
+// ══════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  sb.auth.onAuthStateChange(async (evt, session) => {
+    currentUser = session?.user || null;
+    if (currentUser) {
+      await loadProfile();
+      showRewards();
+    } else {
+      showGate();
+    }
+  });
+});
+
+async function loadProfile() {
+  const { data } = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
+  if (data) {
+    userProfile = data;
+    refCode     = data.referral_code;
+    updateHero();
+    updateTokenDisplays();
+    setReferralLink();
+    loadReferrals();
+    loadHistory();
+  }
+}
+
+// ══════════════════════════════════════════
+// UI SHOW/HIDE
+// ══════════════════════════════════════════
+function showRewards() {
+  document.getElementById('authGate').classList.add('hidden');
+  document.getElementById('rewardsContent').classList.remove('hidden');
+  document.getElementById('sdkInfo').textContent  = currentUser?.email || '';
+  document.getElementById('sdkOut').classList.remove('hidden');
+}
+function showGate() {
+  document.getElementById('authGate').classList.remove('hidden');
+  document.getElementById('rewardsContent').classList.add('hidden');
+  document.getElementById('sdkOut').classList.add('hidden');
+}
+
+// ══════════════════════════════════════════
+// HERO & STATS
+// ══════════════════════════════════════════
+function updateHero() {
+  if (!userProfile) return;
+  const tokens = userProfile.tokens || 0;
+  document.getElementById('heroTokens').textContent = tokens;
+  document.getElementById('topTokens').innerHTML    = '🪙 ' + tokens + ' رصيد';
+  document.getElementById('sdkTokens').innerHTML    = '🪙 ' + tokens + ' رصيد';
+
+  // Milestone
+  document.getElementById('milestoneStatus').textContent = tokens + ' / 500';
+  document.getElementById('milestoneProg').style.width   = Math.min(100, (tokens / 500) * 100) + '%';
+}
+
+function updateTokenDisplays() {
+  const t = userProfile?.tokens || 0;
+  document.getElementById('topTokens').innerHTML  = '🪙 ' + t + ' رصيد';
+  document.getElementById('sdkTokens').innerHTML  = '🪙 ' + t + ' رصيد';
+}
+
+// ══════════════════════════════════════════
+// REFERRAL LINK
+// ══════════════════════════════════════════
+function setReferralLink() {
+  if (!refCode) return;
+  const link = location.origin + '/index.html?ref=' + refCode;
+  document.getElementById('refLinkText').textContent = link;
+}
+
+function getRefLink() {
+  return location.origin + '/index.html?ref=' + (refCode || '');
+}
+
+function copyLink() {
+  navigator.clipboard.writeText(getRefLink())
+    .then(() => { toast('✅ تم نسخ الرابط!'); flashCopied(); })
+    .catch(() => toast('تعذّر النسخ، انسخ الرابط يدوياً'));
+}
+
+function flashCopied() {
+  const box = document.getElementById('refLinkBox');
+  box.style.borderColor = 'var(--teal)';
+  box.style.background  = 'rgba(0,212,184,0.08)';
+  setTimeout(() => {
+    box.style.borderColor = '';
+    box.style.background  = '';
+  }, 1200);
+}
+
+// ── Share Functions ──
+function shareWA() {
+  const msg = `🚀 استخدم ربحي لاحتساب أرباحك الحقيقية من التجارة الإلكترونية!\n\nاشترك مجاناً واحصل على +50 رصيد بونص:\n${getRefLink()}`;
+  window.open('https://wa.me/?text=' + encodeURIComponent(msg));
+}
+function shareFB() {
+  window.open('https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(getRefLink()));
+}
+function shareCopy() { copyLink(); }
+async function shareNative() {
+  const link = getRefLink();
+  const msg  = `🚀 استخدم ربحي — احسب ربحك الحقيقي من التجارة الإلكترونية!\nتسجيل مجاني: ${link}`;
+  if (navigator.share) {
+    try { await navigator.share({ title: 'ربحي', text: msg, url: link }); }
+    catch (e) { /* user cancelled */ }
+  } else { copyLink(); }
+}
+
+// ══════════════════════════════════════════
+// LOAD REFERRALS
+// ══════════════════════════════════════════
+async function loadReferrals() {
+  if (!refCode) return;
+  const { data, error } = await sb.from('referral_events')
+    .select('*, profiles!referral_events_referred_id_fkey(email, full_name, created_at)')
+    .eq('referral_code', refCode)
+    .order('created_at', { ascending: false });
+
+  if (error || !data) { document.getElementById('refList').innerHTML = '<p class="text-xs muted text-center py-4">لا توجد إحالات بعد</p>'; return; }
+
+  const total = data.length;
+  const earned = total * 50;
+
+  document.getElementById('statTotalRefs').textContent  = total;
+  document.getElementById('statEarnedTokens').textContent = earned;
+  document.getElementById('statPending').textContent    = 0;
+  document.getElementById('refCount').textContent       = total + ' إحالة';
+  document.getElementById('totalRefs').textContent      = total;
+  document.getElementById('statTotalRefs').textContent  = total;
+
+  // Levels
+  document.getElementById('lvl2Status').textContent = Math.min(total,5) + '/5';
+  document.getElementById('lvl3Status').textContent = Math.min(total,20) + '/20';
+  document.getElementById('lvl4Status').textContent = Math.min(total,50) + '/50';
+  if (total >= 5)  { document.getElementById('lvl2').style.opacity='1'; document.getElementById('lvl2Status').style.color='var(--teal)'; }
+  if (total >= 20) { document.getElementById('lvl3').style.opacity='1'; document.getElementById('lvl3Status').style.color='var(--gold)'; }
+  if (total >= 50) { document.getElementById('lvl4').style.opacity='1'; document.getElementById('lvl4Status').style.color='var(--purple)'; }
+
+  if (total === 0) {
+    document.getElementById('refList').innerHTML = `
+      <div class="text-center py-6">
+        <div class="text-3xl mb-2">👥</div>
+        <p class="text-sm muted">لا توجد إحالات بعد</p>
+        <p class="text-xs muted mt-1">شارك رابطك لتبدأ</p>
+      </div>`;
+    return;
+  }
+
+  document.getElementById('refList').innerHTML = data.slice(0,5).map(r => {
+    const profile = r.profiles || {};
+    const name = profile.full_name || profile.email?.split('@')[0] || 'مستخدم';
+    const date = r.created_at ? new Date(r.created_at).toLocaleDateString('ar-MA') : '—';
+    return `<div class="flex items-center justify-between py-3" style="border-bottom:1px solid var(--border)">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-full flex items-center justify-center font-900 text-sm" style="background:linear-gradient(135deg,var(--teal),var(--gold));color:#0A0E1A">${name.charAt(0).toUpperCase()}</div>
+        <div>
+          <div class="text-sm font-700">${name}</div>
+          <div class="text-xs muted">${date}</div>
+        </div>
+      </div>
+      <span class="badge badge-ref">+50 🪙</span>
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════
+// TOKEN HISTORY
+// ══════════════════════════════════════════
+async function loadHistory() {
+  if (!currentUser) return;
+  const { data } = await sb.from('token_usage')
+    .select('*')
+    .eq('user_id', currentUser.id)
+    .order('created_at', { ascending: false })
+    .limit(30);
+
+  if (!data || data.length === 0) {
+    document.getElementById('histBody').innerHTML = `
+      <tr><td colspan="4">
+        <div class="text-center py-8 muted text-sm">لا يوجد سجل بعد</div>
+      </td></tr>`;
+    // Compute earned/used from userProfile tokens
+    document.getElementById('totalEarned').textContent = userProfile?.tokens || 100;
+    document.getElementById('totalUsed').textContent   = 0;
+    return;
+  }
+
+  const earnActions = ['bonus_referral','signup_bonus','manual_grant'];
+  let earned = 0, used = 0;
+  data.forEach(r => {
+    if (earnActions.includes(r.action)) earned += r.tokens_used;
+    else used += r.tokens_used;
+  });
+  document.getElementById('totalEarned').textContent = 100 + earned; // 100 base + bonuses
+  document.getElementById('totalUsed').textContent   = used;
+
+  const actionLabels = {
+    ai_advice:      ['استشارة AI', 'badge-use'],
+    bonus_referral: ['مكافأة إحالة', 'badge-ref'],
+    signup_bonus:   ['مكافأة تسجيل', 'badge-earn'],
+    manual_grant:   ['منحة يدوية', 'badge-earn'],
+    export_pdf:     ['تصدير PDF', 'badge-use'],
+  };
+
+  document.getElementById('histBody').innerHTML = data.map(r => {
+    const [lbl, badgeClass] = actionLabels[r.action] || [r.action, 'badge-earn'];
+    const date = new Date(r.created_at).toLocaleDateString('ar-MA');
+    const sign = earnActions.includes(r.action) ? '+' : '-';
+    const color = earnActions.includes(r.action) ? 'var(--teal)' : 'var(--red)';
+    return `<tr>
+      <td><span class="badge ${badgeClass}">${lbl}</span></td>
+      <td class="muted" style="font-size:12px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.product_name || '—'}</td>
+      <td style="font-weight:800;color:${color}">${sign}${r.tokens_used} 🪙</td>
+      <td class="muted" style="font-size:12px;white-space:nowrap">${date}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════
+// MANUAL REF CODE
+// ══════════════════════════════════════════
+async function applyManualRef() {
+  const code = document.getElementById('manualRef').value.trim().toUpperCase();
+  const statusEl = document.getElementById('manualRefStatus');
+  if (!code) { statusEl.textContent = '⚠️ أدخل كود الإحالة'; statusEl.style.color = 'var(--gold)'; return; }
+  if (!currentUser) { statusEl.textContent = '❌ يجب تسجيل الدخول أولاً'; statusEl.style.color = 'var(--red)'; return; }
+  if (userProfile?.referred_by) { statusEl.textContent = '❌ لقد استخدمت كوداً من قبل'; statusEl.style.color = 'var(--red)'; return; }
+
+  statusEl.textContent = '⏳ جارٍ التحقق...';
+  try {
+    await sb.rpc('reward_referral', { ref_code: code, new_user_id: currentUser.id });
+    await sb.from('profiles').update({ referred_by: code }).eq('id', currentUser.id);
+    statusEl.textContent = '✅ تم! حصلت على 50 رصيد بونص';
+    statusEl.style.color = 'var(--teal)';
+    await loadProfile();
+    toast('🎉 +50 رصيد أُضيف لحسابك!');
+  } catch (err) {
+    statusEl.textContent = '❌ كود غير صحيح أو تم استخدامه';
+    statusEl.style.color = 'var(--red)';
+  }
+}
+
+// ══════════════════════════════════════════
+// AUTH
+// ══════════════════════════════════════════
+async function doSignOut() {
+  await sb.auth.signOut();
+  toast('👋 تم تسجيل الخروج');
+  setTimeout(() => location.href = 'index.html', 700);
+}
+
+// ══════════════════════════════════════════
+// TOAST
+// ══════════════════════════════════════════
+let _tt;
+function toast(msg, err=false) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.borderColor = err ? 'rgba(255,77,109,0.4)' : 'rgba(0,212,184,0.3)';
+  el.classList.add('show');
+  clearTimeout(_tt);
+  _tt = setTimeout(() => el.classList.remove('show'), 3200);
+}
+</script>
+</body>
+</html>
