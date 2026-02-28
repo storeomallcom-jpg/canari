@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="theme-color" content="#0A0E1A"/>
+<title>ربحي — الإعدادات</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+/* ══════════ DESIGN TOKENS (shared) ══════════ */
+:root {
+  --ink:      #0A0E1A;
+  --ink-2:    #111827;
+  --ink-3:    #1C2536;
+  --teal:     #00D4B8;
+  --teal-dim: #00A896;
+  --gold:     #F5A623;
+  --gold-dim: #C8841A;
+  --red:      #FF4D6D;
+  --text:     #E8F0FF;
+  --muted:    #6B7A99;
+  --border:   rgba(255,255,255,0.07);
+  --glass:    rgba(28,37,54,0.8);
+  --safe-bot: env(safe-area-inset-bottom, 0px);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body {
+  font-family: 'Cairo', sans-serif;
+  background: var(--ink);
+  color: var(--text);
+  min-height:100vh; min-height:100dvh;
+  overflow-x:hidden;
+  padding-bottom: calc(72px + var(--safe-bot));
+}
+.bg-zellige {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(ellipse 60% 50% at 85% 5%,  rgba(245,166,35,0.10) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 40% at 10% 90%,  rgba(0,212,184,0.08) 0%, transparent 55%);
+}
+.bg-zellige::after {
+  content:''; position:absolute; inset:0;
+  background-image: linear-gradient(rgba(245,166,35,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(245,166,35,0.025) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+/* CARDS */
+.card { background: var(--glass); border: 1px solid var(--border); border-radius: 20px; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
+
+/* GRAD TEXT */
+.grad-text { background: linear-gradient(135deg, var(--teal) 0%, var(--gold) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.teal { color: var(--teal); } .gold { color: var(--gold); } .muted { color: var(--muted); }
+
+/* BUTTONS */
+.btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:13px 24px; border-radius:14px; font-family:'Cairo',sans-serif; font-size:15px; font-weight:700; border:none; cursor:pointer; transition:transform 0.2s,box-shadow 0.2s; -webkit-tap-highlight-color:transparent; }
+.btn:active{transform:scale(0.97)}
+.btn:disabled{opacity:0.45;pointer-events:none}
+.btn-teal{background:linear-gradient(135deg,var(--teal),var(--teal-dim));color:#fff;box-shadow:0 4px 20px rgba(0,212,184,0.3)}
+.btn-teal:hover{box-shadow:0 8px 30px rgba(0,212,184,0.45);transform:translateY(-1px)}
+.btn-gold{background:linear-gradient(135deg,var(--gold),var(--gold-dim));color:#0A0E1A;font-weight:800;box-shadow:0 4px 20px rgba(245,166,35,0.3)}
+.btn-gold:hover{box-shadow:0 8px 30px rgba(245,166,35,0.45);transform:translateY(-1px)}
+.btn-ghost{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);color:var(--text)}
+.btn-ghost:hover{border-color:var(--teal);color:var(--teal)}
+.btn-full{width:100%}
+.btn-danger{background:rgba(255,77,109,0.1);border:1px solid rgba(255,77,109,0.25);color:var(--red)}
+.btn-danger:hover{background:rgba(255,77,109,0.2)}
+
+/* INPUTS */
+.field { width:100%; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.09); border-radius:12px; padding:13px 16px; color:var(--text); font-family:'Cairo',sans-serif; font-size:15px; outline:none; transition:border-color 0.25s,box-shadow 0.25s; -webkit-appearance:none; }
+.field:focus { border-color: var(--teal); box-shadow:0 0 0 3px rgba(0,212,184,0.12); }
+.field::placeholder{ color:var(--muted); font-size:14px; }
+.field-label{ display:block; font-size:12px; color:var(--muted); margin-bottom:7px; font-weight:600; letter-spacing:0.3px; }
+select.field { appearance:none; -webkit-appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236B7A99' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:left 14px center; padding-left:36px; }
+select.field option{ background:#1C2536; color:var(--text); }
+input[type=range]{ -webkit-appearance:none; width:100%; height:5px; border-radius:3px; background:rgba(255,255,255,0.1); outline:none; cursor:pointer; }
+input[type=range]::-webkit-slider-thumb{ -webkit-appearance:none; width:20px; height:20px; border-radius:50%; background:var(--gold); box-shadow:0 0 8px rgba(245,166,35,0.5); }
+input[type=range]::-moz-range-thumb{ width:20px; height:20px; border:none; border-radius:50%; background:var(--gold); }
+
+/* TOGGLE SWITCH */
+.toggle { position:relative; display:inline-block; width:52px; height:28px; flex-shrink:0; }
+.toggle input { opacity:0; width:0; height:0; }
+.toggle-slider {
+  position:absolute; cursor:pointer; inset:0;
+  background: rgba(255,255,255,0.1);
+  border-radius:28px; transition:0.3s;
+  border:1px solid var(--border);
+}
+.toggle-slider::before {
+  content:''; position:absolute;
+  width:20px; height:20px; right:4px; bottom:3px;
+  background:#fff; border-radius:50%;
+  transition: transform 0.3s cubic-bezier(.34,1.56,.64,1);
+}
+.toggle input:checked + .toggle-slider { background: var(--teal); border-color: var(--teal); }
+.toggle input:checked + .toggle-slider::before { transform: translateX(-24px); }
+
+/* NAV */
+.bottom-nav { position:fixed; bottom:0; left:0; right:0; z-index:200; background:rgba(10,14,26,0.96); border-top:1px solid var(--border); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); padding-bottom:var(--safe-bot); display:flex; }
+.nav-item { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; padding:10px 6px 8px; cursor:pointer; -webkit-tap-highlight-color:transparent; transition:color 0.2s; text-decoration:none; color:var(--muted); font-size:10px; font-weight:700; font-family:'Cairo',sans-serif; }
+.nav-item .nav-icon { width:28px; height:28px; border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:16px; transition:background 0.2s,transform 0.2s; }
+.nav-item.active { color: var(--gold); }
+.nav-item.active .nav-icon { background:rgba(245,166,35,0.15); transform:translateY(-2px); }
+
+/* TOP BAR */
+.top-bar { position:sticky; top:0; z-index:100; background:rgba(10,14,26,0.92); backdrop-filter:blur(16px); border-bottom:1px solid var(--border); padding:14px 20px; display:flex; align-items:center; justify-content:space-between; }
+
+/* TOAST */
+#toast { position:fixed; bottom:calc(85px + var(--safe-bot)); left:50%; transform:translateX(-50%) translateY(20px); background:var(--ink-3); border:1px solid var(--border); border-radius:12px; padding:12px 22px; font-size:13px; font-weight:600; z-index:1000; white-space:nowrap; opacity:0; transition:all 0.35s cubic-bezier(.34,1.4,.64,1); pointer-events:none; }
+#toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+/* SETTINGS SECTION HEADER */
+.section-head { font-size:12px; font-weight:800; color:var(--muted); letter-spacing:1px; text-transform:uppercase; margin-bottom:12px; padding-right:4px; }
+
+/* SETTING ROW */
+.setting-row { display:flex; align-items:center; justify-content:space-between; padding:16px 0; border-bottom:1px solid var(--border); }
+.setting-row:last-child { border-bottom:none; }
+.setting-info h4 { font-size:14px; font-weight:700; margin-bottom:2px; }
+.setting-info p  { font-size:12px; color:var(--muted); }
+
+/* SAVE INDICATOR */
+.save-dot { width:8px; height:8px; border-radius:50%; background:var(--teal); display:inline-block; animation:pulse-dot 2s infinite; }
+@keyframes pulse-dot { 0%,100%{opacity:0.4;transform:scale(0.8)} 50%{opacity:1;transform:scale(1)} }
+
+/* SHIPPING PRESET CHIPS */
+.preset-chip { padding:7px 14px; border-radius:10px; font-size:12px; font-weight:700; cursor:pointer; border:1px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.04); color:var(--muted); transition:all 0.2s; -webkit-tap-highlight-color:transparent; }
+.preset-chip.active { background:rgba(245,166,35,0.15); border-color:rgba(245,166,35,0.35); color:var(--gold); }
+.preset-chip:active { transform:scale(0.96); }
+
+/* PROGRESS RING */
+.ring-wrap { position:relative; width:80px; height:80px; flex-shrink:0; }
+.ring-wrap svg { transform:rotate(-90deg); }
+.ring-bg    { fill:none; stroke:rgba(255,255,255,0.07); stroke-width:5; }
+.ring-fill  { fill:none; stroke:var(--gold); stroke-width:5; stroke-linecap:round; transition:stroke-dashoffset 0.8s cubic-bezier(.34,1.4,.64,1); }
+.ring-label { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+.ring-val   { font-size:18px; font-weight:900; line-height:1; color:var(--gold); }
+.ring-sub   { font-size:9px; color:var(--muted); font-weight:600; }
+
+/* ANIMATION */
+@keyframes fade-up { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+.fade-up { animation:fade-up 0.5s ease forwards; opacity:0; }
+.d1{animation-delay:0.05s} .d2{animation-delay:0.1s} .d3{animation-delay:0.15s} .d4{animation-delay:0.2s} .d5{animation-delay:0.25s}
+
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:2px}
+
+/* DESKTOP SIDEBAR */
+@media(min-width:768px){
+  body{padding-bottom:0}
+  .bottom-nav{display:none}
+  .desktop-sidebar{position:fixed;top:0;right:0;bottom:0;width:240px;background:rgba(10,14,26,0.98);border-left:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;backdrop-filter:blur(20px)}
+  .main-content{margin-right:240px}
+}
+@media(max-width:767px){ .desktop-sidebar{display:none} .main-content{margin-right:0} }
+</style>
+</head>
+<body>
+<div class="bg-zellige"></div>
+<div id="toast"></div>
+
+<!-- DESKTOP SIDEBAR -->
+<div class="desktop-sidebar">
+  <div class="px-6 mb-8">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-xl flex items-center justify-center text-xl font-black" style="background:linear-gradient(135deg,var(--teal),var(--gold));border-radius:11px">ر</div>
+      <span class="text-lg font-black grad-text">ربحي</span>
+    </div>
+  </div>
+  <div class="flex-1 px-3 space-y-1">
+    <a href="index.html"   class="flex items-center gap-3 px-4 py-3 text-sm transition-all hover:bg-white/5" style="border-radius:12px;color:var(--muted);font-weight:600"><span class="text-lg">📊</span> لوحة التحكم</a>
+    <a href="settings.html" class="flex items-center gap-3 px-4 py-3 text-sm" style="border-radius:12px;background:rgba(245,166,35,0.12);color:var(--gold);font-weight:700"><span class="text-lg">⚙️</span> الإعدادات</a>
+    <a href="rewards.html" class="flex items-center gap-3 px-4 py-3 text-sm transition-all hover:bg-white/5" style="border-radius:12px;color:var(--muted);font-weight:600"><span class="text-lg">🎁</span> المكافآت</a>
+  </div>
+  <div class="px-6 mt-4">
+    <div class="text-xs muted text-center mb-3" id="sdkInfo"></div>
+    <button onclick="doSignOut()" id="sdkOut" class="btn btn-full text-xs py-2 hidden btn-danger" style="border-radius:14px">خروج</button>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main-content relative z-10">
+
+  <!-- TOP BAR -->
+  <div class="top-bar">
+    <div class="flex items-center gap-3">
+      <a href="index.html" class="w-8 h-8 rounded-full flex items-center justify-content btn-ghost" style="display:flex;align-items:center;justify-content:center;text-decoration:none;font-size:18px;width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1)">←</a>
+      <div>
+        <h1 class="text-base font-black">الإعدادات</h1>
+        <p class="text-10 muted" style="font-size:11px">خزينة التاجر</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <div class="save-dot" id="saveDot" style="display:none"></div>
+      <span class="text-xs muted" id="saveStatus">محفوظ ✓</span>
+    </div>
+  </div>
+
+  <div class="px-4 py-5 space-y-6 max-w-lg mx-auto">
+
+    <!-- ── COST OVERVIEW RING ── -->
+    <div class="card p-5 fade-up d1">
+      <div class="flex items-center gap-5">
+        <div class="ring-wrap">
+          <svg viewBox="0 0 80 80" width="80" height="80">
+            <circle class="ring-bg"  cx="40" cy="40" r="35"/>
+            <circle class="ring-fill" id="tvaRing" cx="40" cy="40" r="35"
+              stroke-dasharray="220" stroke-dashoffset="220"/>
+          </svg>
+          <div class="ring-label">
+            <span class="ring-val" id="ringVal">20</span>
+            <span class="ring-sub">TVA %</span>
+          </div>
+        </div>
+        <div class="flex-1">
+          <h3 class="font-black text-lg mb-1">ملخص التكاليف الافتراضية</h3>
+          <p class="text-xs muted leading-relaxed">هذه القيم تُحمَّل تلقائياً في كل حساب جديد. عدّلها مرة واحدة واستفد دائماً.</p>
+          <div class="mt-3">
+            <div class="text-2xl font-900" id="totalDefaultCost" style="color:var(--gold)">— د.م.</div>
+            <div class="text-xs muted">مجموع التكاليف الافتراضية / طلب</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TVA SETTINGS ── -->
+    <div class="fade-up d2">
+      <p class="section-head">🏛️ الضريبة — TVA</p>
+      <div class="card p-5">
+        <div class="flex justify-between items-center mb-4">
+          <div>
+            <h4 class="font-700 text-sm">نسبة ضريبة القيمة المضافة</h4>
+            <p class="text-xs muted mt-0.5">تُطبَّق على الإيراد قبل حساب الربح</p>
+          </div>
+          <span class="font-900 text-xl gold" id="tvaDisplay">20%</span>
+        </div>
+
+        <div class="flex flex-wrap gap-2 mb-4">
+          <button class="preset-chip" onclick="selectTVA(0,this)">0% معفي</button>
+          <button class="preset-chip" onclick="selectTVA(7,this)">7% مخفّض</button>
+          <button class="preset-chip" onclick="selectTVA(10,this)">10%</button>
+          <button class="preset-chip" onclick="selectTVA(14,this)">14%</button>
+          <button class="preset-chip active" onclick="selectTVA(20,this)">20% عادي</button>
+        </div>
+        <input type="range" id="tvaSlider" min="0" max="30" value="20" step="1" oninput="onTvaRange(this.value)"/>
+        <div class="flex justify-between text-xs muted mt-1">
+          <span>0%</span><span>15%</span><span>30%</span>
+        </div>
+
+        <div class="mt-4 p-3 rounded-12" style="border-radius:12px;background:rgba(245,166,35,0.06);border:1px solid rgba(245,166,35,0.15)">
+          <p class="text-xs" style="color:rgba(232,240,255,0.6);line-height:1.8">
+            📌 <strong style="color:var(--gold)">مثال:</strong> عند بيع منتج بـ 200 درهم مع TVA 20%،
+            يراد الدولة <span id="tvaExample" style="color:var(--gold);font-weight:800">40 درهم</span>
+            وتبقى لك <span id="netExample" style="color:var(--teal);font-weight:800">160 درهم</span> فعلياً.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SHIPPING SETTINGS ── -->
+    <div class="fade-up d3">
+      <p class="section-head">🚚 الشحن والتوصيل</p>
+      <div class="card p-5 space-y-5">
+        <!-- Carrier presets -->
+        <div>
+          <label class="field-label">شركة الشحن الافتراضية</label>
+          <div class="flex flex-wrap gap-2 mb-3" id="carrierPresets">
+            <button class="preset-chip active" onclick="setCarrier('Amana',25,this)">Amana — 25 د.م.</button>
+            <button class="preset-chip" onclick="setCarrier('Amex',28,this)">Amex — 28 د.م.</button>
+            <button class="preset-chip" onclick="setCarrier('CTM',30,this)">CTM — 30 د.م.</button>
+            <button class="preset-chip" onclick="setCarrier('Autre',0,this)">أخرى</button>
+          </div>
+        </div>
+
+        <div>
+          <label class="field-label">تكلفة الشحن للطلب الواحد (د.م.)</label>
+          <input type="number" id="shipCost" class="field" value="25" min="0" step="0.5" inputmode="decimal" oninput="liveUpdate()"/>
+        </div>
+
+        <div>
+          <label class="field-label">تكلفة التعبئة والتغليف (د.م.)</label>
+          <input type="number" id="packCost" class="field" value="5" min="0" step="0.5" inputmode="decimal" oninput="liveUpdate()"/>
+        </div>
+
+        <div class="setting-row" style="padding:12px 0">
+          <div class="setting-info">
+            <h4>احتساب شحن المرتجع</h4>
+            <p>هل تدفع شحن الطرود المرتجعة؟</p>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="returnShipToggle" checked onchange="liveUpdate()"/>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div id="returnShipWrap">
+          <label class="field-label">تكلفة إعادة المرتجع (د.م.)</label>
+          <input type="number" id="returnShipCost" class="field" value="20" min="0" step="5" inputmode="decimal" oninput="liveUpdate()"/>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── MARKETING SETTINGS ── -->
+    <div class="fade-up d4">
+      <p class="section-head">📣 التسويق والإعلان</p>
+      <div class="card p-5 space-y-4">
+        <div>
+          <label class="field-label">تكلفة التسويق لكل طلب محوَّل (د.م.)</label>
+          <input type="number" id="mktgCost" class="field" value="15" min="0" step="0.5" inputmode="decimal" oninput="liveUpdate()"/>
+          <p class="text-xs muted mt-2">= ميزانية الإعلانات اليومية ÷ عدد الطلبات اليومية</p>
+        </div>
+
+        <div>
+          <label class="field-label">قناة التسويق الرئيسية</label>
+          <select id="mktgChannel" class="field" onchange="liveUpdate()">
+            <option value="meta">Facebook / Instagram Ads</option>
+            <option value="tiktok">TikTok Ads</option>
+            <option value="google">Google Ads</option>
+            <option value="influencer">إنفلوانسر / كريتور</option>
+            <option value="organic">عضوي / Organic</option>
+          </select>
+        </div>
+
+        <!-- Cost-per-order calculator -->
+        <div class="p-4 rounded-12" style="border-radius:12px;background:rgba(0,212,184,0.05);border:1px solid rgba(0,212,184,0.12)">
+          <p class="text-xs font-800 teal mb-3">🧮 حاسبة CPO السريعة</p>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="field-label">الميزانية اليومية (د.م.)</label>
+              <input type="number" id="dailyBudget" class="field" placeholder="200" inputmode="decimal" oninput="calcCPO()"/>
+            </div>
+            <div>
+              <label class="field-label">الطلبات اليومية</label>
+              <input type="number" id="dailyOrders" class="field" placeholder="10" inputmode="numeric" oninput="calcCPO()"/>
+            </div>
+          </div>
+          <div class="mt-3 flex items-center gap-2">
+            <span class="text-xs muted">CPO المحسوب:</span>
+            <span class="font-900 teal" id="cpoResult">— د.م.</span>
+            <button onclick="applyCPO()" class="btn btn-ghost text-xs py-1 px-3" style="padding:5px 12px;font-size:11px;margin-right:auto">تطبيق →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── BUSINESS PROFILE ── -->
+    <div class="fade-up d5">
+      <p class="section-head">🏪 بروفايل التاجر</p>
+      <div class="card p-5 space-y-4">
+        <div>
+          <label class="field-label">اسم المتجر</label>
+          <input type="text" id="storeName" class="field" placeholder="متجري المغربي" oninput="liveUpdate()"/>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="field-label">قطاع المنتجات</label>
+            <select id="sector" class="field" onchange="liveUpdate()">
+              <option value="fashion">موضة وملابس</option>
+              <option value="beauty">جمال وعناية</option>
+              <option value="electronics">إلكترونيات</option>
+              <option value="home">منزل وديكور</option>
+              <option value="sport">رياضة</option>
+              <option value="food">غذاء وصحة</option>
+              <option value="other">أخرى</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label">حجم الأعمال</label>
+            <select id="bizScale" class="field" onchange="liveUpdate()">
+              <option value="solo">صغير (1-20 طلب/يوم)</option>
+              <option value="small">متوسط (20-50)</option>
+              <option value="medium">كبير (50-200)</option>
+              <option value="large">ضخم (+200)</option>
+            </select>
+          </div>
+        </div>
+        <div class="setting-row" style="padding:12px 0">
+          <div class="setting-info">
+            <h4>وضع COD الكامل</h4>
+            <p>كل المبيعات بالدفع عند الاستلام</p>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="codMode" checked onchange="liveUpdate()"/>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── NOTIFICATIONS ── -->
+    <div class="fade-up d5">
+      <p class="section-head">🔔 التنبيهات</p>
+      <div class="card p-5 space-y-0">
+        <div class="setting-row">
+          <div class="setting-info">
+            <h4>تنبيه عند انخفاض الرصيد</h4>
+            <p>إشعار عند وصول الرصيد لـ 10 رصيد</p>
+          </div>
+          <label class="toggle"><input type="checkbox" id="notifLow" checked/><span class="toggle-slider"></span></label>
+        </div>
+        <div class="setting-row">
+          <div class="setting-info">
+            <h4>ملخص أسبوعي</h4>
+            <p>تقرير مختصر عبر البريد الإلكتروني</p>
+          </div>
+          <label class="toggle"><input type="checkbox" id="notifWeekly"/><span class="toggle-slider"></span></label>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SAVE BUTTON ── -->
+    <div class="fade-up d5 pb-4">
+      <button class="btn btn-gold btn-full py-4 text-base" onclick="saveSettings()">
+        💾 حفظ جميع الإعدادات
+      </button>
+      <button class="btn btn-danger btn-full mt-3 py-3 text-sm" onclick="resetSettings()">
+        🗑️ إعادة تعيين الافتراضي
+      </button>
+    </div>
+
+  </div>
+</div><!-- /main-content -->
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav md:hidden">
+  <a href="index.html" class="nav-item"><div class="nav-icon">📊</div><span>الرئيسية</span></a>
+  <a href="index.html#calc" class="nav-item"><div class="nav-icon">🧮</div><span>الحاسبة</span></a>
+  <a href="settings.html" class="nav-item active"><div class="nav-icon">⚙️</div><span>الإعدادات</span></a>
+  <a href="rewards.html" class="nav-item"><div class="nav-icon">🎁</div><span>المكافآت</span></a>
+</nav>
+
+<script>
+// ══════════════════════════════════════════
+// ⚙️ CONFIG
+// ══════════════════════════════════════════
+const SUPABASE_URL  = 'https://YOUR_PROJECT.supabase.co';
+const SUPABASE_ANON = 'YOUR_ANON_KEY';
+const GROQ_API_KEY  = 'YOUR_GROQ_API_KEY';
+
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON);
+let currentUser = null;
+
+// ── LOAD ON START ──
+document.addEventListener('DOMContentLoaded', () => {
+  loadFromStorage();
+  sb.auth.onAuthStateChange((_, session) => {
+    currentUser = session?.user || null;
+    document.getElementById('sdkInfo').textContent = currentUser?.email || '';
+    document.getElementById('sdkOut').classList.toggle('hidden', !currentUser);
+  });
+  // Toggle return ship section
+  document.getElementById('returnShipToggle').addEventListener('change', function() {
+    document.getElementById('returnShipWrap').style.opacity = this.checked ? '1' : '0.4';
+  });
+});
+
+// ══════════════════════════════════════════
+// STORAGE
+// ══════════════════════════════════════════
+const STORE_KEY = 'ribhi_settings';
+
+function loadFromStorage() {
+  const d = JSON.parse(localStorage.getItem(STORE_KEY) || '{}');
+  if (d.tva   != null) { document.getElementById('tvaSlider').value = d.tva; syncTVA(d.tva); }
+  if (d.ship  != null) document.getElementById('shipCost').value = d.ship;
+  if (d.pack  != null) document.getElementById('packCost').value = d.pack;
+  if (d.mktg  != null) document.getElementById('mktgCost').value = d.mktg;
+  if (d.retShipCost != null) document.getElementById('returnShipCost').value = d.retShipCost;
+  if (d.store != null) document.getElementById('storeName').value = d.store;
+  if (d.sector != null) document.getElementById('sector').value = d.sector;
+  if (d.bizScale != null) document.getElementById('bizScale').value = d.bizScale;
+  if (d.codMode != null) document.getElementById('codMode').checked = d.codMode;
+  if (d.carrier != null) {
+    document.querySelectorAll('#carrierPresets .preset-chip').forEach(b => {
+      b.classList.toggle('active', b.textContent.split('—')[0].trim() === d.carrier);
+    });
+  }
+  liveUpdate();
+}
+
+function getValues() {
+  return {
+    tva:         parseInt(document.getElementById('tvaSlider').value),
+    ship:        parseFloat(document.getElementById('shipCost').value) || 0,
+    pack:        parseFloat(document.getElementById('packCost').value) || 0,
+    mktg:        parseFloat(document.getElementById('mktgCost').value) || 0,
+    retShipCost: parseFloat(document.getElementById('returnShipCost').value) || 0,
+    store:       document.getElementById('storeName').value,
+    sector:      document.getElementById('sector').value,
+    bizScale:    document.getElementById('bizScale').value,
+    codMode:     document.getElementById('codMode').checked,
+    mktgChannel: document.getElementById('mktgChannel').value,
+  };
+}
+
+function saveSettings() {
+  const vals = getValues();
+  localStorage.setItem(STORE_KEY, JSON.stringify(vals));
+  showSaved();
+  toast('✅ تم حفظ الإعدادات بنجاح!');
+}
+
+function resetSettings() {
+  if (!confirm('سيتم إعادة تعيين جميع الإعدادات. متأكد؟')) return;
+  localStorage.removeItem(STORE_KEY);
+  location.reload();
+}
+
+// Auto-save on every change
+let _saveTimer;
+function liveUpdate() {
+  clearTimeout(_saveTimer);
+  document.getElementById('saveDot').style.display = 'inline-block';
+  document.getElementById('saveStatus').textContent = 'يحفظ...';
+  updateRingAndSummary();
+  _saveTimer = setTimeout(() => {
+    localStorage.setItem(STORE_KEY, JSON.stringify(getValues()));
+    showSaved();
+  }, 800);
+}
+
+function showSaved() {
+  document.getElementById('saveDot').style.display = 'none';
+  document.getElementById('saveStatus').textContent = 'محفوظ ✓';
+  document.getElementById('saveStatus').style.color = 'var(--teal)';
+  setTimeout(() => { document.getElementById('saveStatus').style.color = ''; }, 2000);
+}
+
+// ══════════════════════════════════════════
+// TVA
+// ══════════════════════════════════════════
+function onTvaRange(v) { syncTVA(parseInt(v)); liveUpdate(); }
+function selectTVA(v, btn) {
+  document.getElementById('tvaSlider').value = v;
+  document.querySelectorAll('.preset-chip').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  syncTVA(v); liveUpdate();
+}
+function syncTVA(v) {
+  document.getElementById('tvaDisplay').textContent = v + '%';
+  // Ring animation (circumference = 2πr = 2*π*35 ≈ 220)
+  const circ = 220;
+  const offset = circ - (v / 30) * circ;
+  document.getElementById('tvaRing').setAttribute('stroke-dashoffset', offset);
+  document.getElementById('ringVal').textContent = v;
+  // Example
+  const taxAmt = (200 * v / 100).toFixed(0);
+  const netAmt = (200 - taxAmt).toFixed(0);
+  document.getElementById('tvaExample').textContent = taxAmt + ' درهم';
+  document.getElementById('netExample').textContent = netAmt + ' درهم';
+}
+
+// ══════════════════════════════════════════
+// CARRIER PRESETS
+// ══════════════════════════════════════════
+function setCarrier(name, price, btn) {
+  document.querySelectorAll('#carrierPresets .preset-chip').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (price > 0) { document.getElementById('shipCost').value = price; }
+  liveUpdate();
+}
+
+// ══════════════════════════════════════════
+// CPO CALCULATOR
+// ══════════════════════════════════════════
+function calcCPO() {
+  const budget = parseFloat(document.getElementById('dailyBudget').value) || 0;
+  const orders = parseFloat(document.getElementById('dailyOrders').value) || 0;
+  const cpo = orders > 0 ? (budget / orders).toFixed(1) : 0;
+  document.getElementById('cpoResult').textContent = cpo > 0 ? cpo + ' د.م.' : '— د.م.';
+}
+function applyCPO() {
+  const cpo = parseFloat(document.getElementById('cpoResult').textContent);
+  if (cpo > 0) { document.getElementById('mktgCost').value = cpo; liveUpdate(); toast('✅ تم تطبيق CPO'); }
+}
+
+// ══════════════════════════════════════════
+// RING & SUMMARY
+// ══════════════════════════════════════════
+function updateRingAndSummary() {
+  const ship = parseFloat(document.getElementById('shipCost').value) || 0;
+  const pack = parseFloat(document.getElementById('packCost').value) || 0;
+  const mktg = parseFloat(document.getElementById('mktgCost').value) || 0;
+  const total = ship + pack + mktg;
+  document.getElementById('totalDefaultCost').textContent = total.toFixed(0) + ' د.م.';
+}
+
+// ══════════════════════════════════════════
+// AUTH
+// ══════════════════════════════════════════
+async function doSignOut() {
+  await sb.auth.signOut();
+  toast('👋 تم تسجيل الخروج');
+  setTimeout(() => location.href = 'index.html', 800);
+}
+
+// ══════════════════════════════════════════
+// TOAST
+// ══════════════════════════════════════════
+let _toastTimer;
+function toast(msg, err=false) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.borderColor = err ? 'rgba(255,77,109,0.4)' : 'rgba(0,212,184,0.3)';
+  el.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove('show'), 3000);
+}
+</script>
+</body>
+</html>
