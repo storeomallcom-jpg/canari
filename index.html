@@ -1,0 +1,1148 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="theme-color" content="#0A0E1A"/>
+<title>ربحي — لوحة التحكم</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+/* ═══════════════════════ DESIGN TOKENS ═══════════════════════ */
+:root {
+  --ink:       #0A0E1A;
+  --ink-2:     #111827;
+  --ink-3:     #1C2536;
+  --teal:      #00D4B8;
+  --teal-dim:  #00A896;
+  --gold:      #F5A623;
+  --gold-dim:  #C8841A;
+  --red:       #FF4D6D;
+  --text:      #E8F0FF;
+  --muted:     #6B7A99;
+  --border:    rgba(255,255,255,0.07);
+  --glass:     rgba(28,37,54,0.8);
+  --safe-bot:  env(safe-area-inset-bottom, 0px);
+}
+
+/* ═══════════════════════ RESET & BASE ═══════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+body {
+  font-family: 'Cairo', sans-serif;
+  background: var(--ink);
+  color: var(--text);
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  padding-bottom: calc(72px + var(--safe-bot));
+}
+
+/* ═══════════════════════ BACKGROUND ═══════════════════════ */
+.bg-zellige {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(ellipse 70% 50% at 15% 0%,   rgba(0,212,184,0.10) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 40% at 85% 100%,  rgba(245,166,35,0.08) 0%, transparent 55%),
+    radial-gradient(ellipse 40% 60% at 50% 50%,   rgba(255,77,109,0.04) 0%, transparent 60%);
+}
+/* Subtle geometric grid */
+.bg-zellige::after {
+  content: '';
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(0,212,184,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,212,184,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* ═══════════════════════ GLASS CARD ═══════════════════════ */
+.card {
+  background: var(--glass);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+.card-sm { border-radius: 14px; }
+
+/* ═══════════════════════ TYPOGRAPHY ═══════════════════════ */
+.grad-text {
+  background: linear-gradient(135deg, var(--teal) 0%, var(--gold) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.teal  { color: var(--teal); }
+.gold  { color: var(--gold); }
+.red-c { color: var(--red);  }
+.muted { color: var(--muted);}
+
+/* ═══════════════════════ BUTTONS ═══════════════════════ */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 13px 24px; border-radius: 14px;
+  font-family: 'Cairo', sans-serif; font-size: 15px; font-weight: 700;
+  border: none; cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn:active { transform: scale(0.97); }
+.btn:disabled { opacity: 0.45; pointer-events: none; }
+
+.btn-teal {
+  background: linear-gradient(135deg, var(--teal), var(--teal-dim));
+  color: #fff;
+  box-shadow: 0 4px 20px rgba(0,212,184,0.3);
+}
+.btn-teal:hover { box-shadow: 0 8px 30px rgba(0,212,184,0.45); transform: translateY(-1px); }
+
+.btn-gold {
+  background: linear-gradient(135deg, var(--gold), var(--gold-dim));
+  color: #0A0E1A; font-weight: 800;
+  box-shadow: 0 4px 20px rgba(245,166,35,0.3);
+}
+.btn-gold:hover { box-shadow: 0 8px 30px rgba(245,166,35,0.45); transform: translateY(-1px); }
+
+.btn-ghost {
+  background: var(--border);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: var(--text);
+}
+.btn-ghost:hover { border-color: var(--teal); color: var(--teal); }
+
+.btn-full { width: 100%; }
+
+/* ═══════════════════════ INPUTS ═══════════════════════ */
+.field {
+  width: 100%;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.09);
+  border-radius: 12px;
+  padding: 13px 16px;
+  color: var(--text);
+  font-family: 'Cairo', sans-serif;
+  font-size: 15px;
+  outline: none;
+  transition: border-color 0.25s, box-shadow 0.25s;
+  -webkit-appearance: none;
+}
+.field:focus {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px rgba(0,212,184,0.12);
+}
+.field::placeholder { color: var(--muted); font-size: 14px; }
+.field-label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 7px; font-weight: 600; letter-spacing: 0.3px; }
+
+/* ═══════════════════════ RANGE SLIDER ═══════════════════════ */
+input[type=range] {
+  -webkit-appearance: none; width: 100%; height: 5px;
+  border-radius: 3px; background: rgba(255,255,255,0.1); outline: none; cursor: pointer;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 20px; height: 20px;
+  border-radius: 50%; background: var(--teal);
+  box-shadow: 0 0 8px rgba(0,212,184,0.6);
+}
+input[type=range]::-moz-range-thumb {
+  width: 20px; height: 20px; border: none; border-radius: 50%; background: var(--teal);
+}
+
+/* ═══════════════════════ STAT CARD ═══════════════════════ */
+.stat-card {
+  padding: 18px 16px;
+  position: relative; overflow: hidden;
+}
+.stat-card::before {
+  content: ''; position: absolute;
+  inset: 0; opacity: 0.06; border-radius: 20px;
+}
+.stat-card.c-teal::before  { background: var(--teal); }
+.stat-card.c-gold::before  { background: var(--gold);  }
+.stat-card.c-red::before   { background: var(--red);   }
+.stat-card.c-blue::before  { background: #60A5FA;       }
+.stat-icon {
+  width: 38px; height: 38px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; margin-bottom: 12px;
+}
+.stat-icon.c-teal { background: rgba(0,212,184,0.15); }
+.stat-icon.c-gold { background: rgba(245,166,35,0.15); }
+.stat-icon.c-red  { background: rgba(255,77,109,0.15); }
+.stat-icon.c-blue { background: rgba(96,165,250,0.15); }
+.stat-num  { font-size: 1.75rem; font-weight: 900; line-height: 1.1; }
+.stat-lbl  { font-size: 11px; color: var(--muted); margin-top: 4px; font-weight: 600; }
+.stat-delta{ font-size: 11px; font-weight: 700; margin-top: 3px; }
+
+/* ═══════════════════════ BOTTOM NAV ═══════════════════════ */
+.bottom-nav {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
+  background: rgba(10,14,26,0.96);
+  border-top: 1px solid var(--border);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  padding-bottom: var(--safe-bot);
+  display: flex;
+}
+.nav-item {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 4px; padding: 10px 6px 8px;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+  transition: color 0.2s;
+  text-decoration: none; color: var(--muted);
+  font-size: 10px; font-weight: 700; font-family: 'Cairo', sans-serif;
+}
+.nav-item .nav-icon {
+  width: 28px; height: 28px; border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; transition: background 0.2s, transform 0.2s;
+}
+.nav-item.active { color: var(--teal); }
+.nav-item.active .nav-icon {
+  background: rgba(0,212,184,0.15);
+  transform: translateY(-2px);
+}
+
+/* ═══════════════════════ TOP BAR ═══════════════════════ */
+.top-bar {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(10,14,26,0.92);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 20px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+
+/* ═══════════════════════ TOKEN BADGE ═══════════════════════ */
+.token-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: rgba(245,166,35,0.12);
+  border: 1px solid rgba(245,166,35,0.3);
+  border-radius: 20px; padding: 5px 12px;
+  font-size: 12px; font-weight: 700; color: var(--gold);
+}
+
+/* ═══════════════════════ MODAL ═══════════════════════ */
+.overlay {
+  position: fixed; inset: 0; z-index: 500;
+  background: rgba(0,0,0,0.75);
+  backdrop-filter: blur(6px);
+  display: flex; align-items: flex-end; justify-content: center;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.3s;
+}
+.overlay.open { opacity: 1; pointer-events: all; }
+.sheet {
+  width: 100%; max-width: 520px;
+  border-radius: 24px 24px 0 0;
+  padding: 24px 24px calc(24px + var(--safe-bot));
+  transform: translateY(60px);
+  transition: transform 0.4s cubic-bezier(.34,1.4,.64,1);
+}
+.overlay.open .sheet { transform: translateY(0); }
+.sheet-handle {
+  width: 40px; height: 4px; border-radius: 2px;
+  background: var(--border); margin: 0 auto 20px;
+}
+
+/* ═══════════════════════ TABS ═══════════════════════ */
+.tab-row {
+  display: flex; gap: 6px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 12px; padding: 4px;
+}
+.tab-btn-sm {
+  flex: 1; padding: 8px; border-radius: 9px;
+  font-family: 'Cairo', sans-serif; font-size: 13px; font-weight: 700;
+  cursor: pointer; border: none; background: transparent; color: var(--muted);
+  transition: all 0.2s;
+}
+.tab-btn-sm.active {
+  background: rgba(0,212,184,0.15);
+  color: var(--teal);
+  border: 1px solid rgba(0,212,184,0.25);
+}
+
+/* ═══════════════════════ AI RESULT ═══════════════════════ */
+.ai-card {
+  background: rgba(0,212,184,0.06);
+  border: 1px solid rgba(0,212,184,0.18);
+  border-radius: 16px; padding: 18px;
+  position: relative;
+}
+.price-interval {
+  background: rgba(245,166,35,0.12);
+  border: 1px solid rgba(245,166,35,0.3);
+  border-radius: 12px; padding: 14px 18px;
+  text-align: center; margin-bottom: 14px;
+}
+.price-interval .label { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+.price-interval .range { font-size: 1.6rem; font-weight: 900; color: var(--gold); letter-spacing: -0.5px; }
+
+/* ═══════════════════════ PROFIT HEALTH BAR ═══════════════════════ */
+.health-bar { height: 8px; background: rgba(255,255,255,0.07); border-radius: 4px; overflow: hidden; }
+.health-fill { height: 100%; border-radius: 4px; transition: width 1.2s cubic-bezier(.34,1.4,.64,1); }
+
+/* ═══════════════════════ DIVIDER ═══════════════════════ */
+.divider { height: 1px; background: var(--border); margin: 0 -4px; }
+
+/* ═══════════════════════ LOADING DOTS ═══════════════════════ */
+.dots span {
+  display: inline-block; width: 7px; height: 7px;
+  border-radius: 50%; background: var(--teal); margin: 0 3px;
+  animation: dot-bounce 1.2s infinite;
+}
+.dots span:nth-child(2) { animation-delay: 0.2s; }
+.dots span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes dot-bounce { 0%,80%,100%{transform:scale(0.5);opacity:0.3} 40%{transform:scale(1);opacity:1} }
+
+/* ═══════════════════════ TOAST ═══════════════════════ */
+#toast {
+  position: fixed; bottom: calc(85px + var(--safe-bot)); left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--ink-3); border: 1px solid var(--border);
+  border-radius: 12px; padding: 12px 22px;
+  font-size: 13px; font-weight: 600; z-index: 1000;
+  white-space: nowrap; opacity: 0;
+  transition: all 0.35s cubic-bezier(.34,1.4,.64,1);
+  pointer-events: none;
+}
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ═══════════════════════ ANIMATIONS ═══════════════════════ */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-up { animation: fade-up 0.5s ease forwards; }
+.d1 { animation-delay: 0.05s; }
+.d2 { animation-delay: 0.1s;  }
+.d3 { animation-delay: 0.15s; }
+.d4 { animation-delay: 0.2s;  }
+.d5 { animation-delay: 0.25s; }
+.d6 { animation-delay: 0.3s;  }
+.fade-up:not(.no-init) { opacity: 0; }
+
+/* ═══════════════════════ SCROLLBAR ═══════════════════════ */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
+/* ═══════════════════════ SELECT ═══════════════════════ */
+select.field { appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236B7A99' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: left 14px center; padding-left: 36px; }
+select.field option { background: #1C2536; color: var(--text); }
+
+/* ═══════════════════════ RESPONSIVE ═══════════════════════ */
+@media (min-width: 768px) {
+  body { padding-bottom: 0; }
+  .bottom-nav { display: none; }
+  .desktop-sidebar {
+    position: fixed; top: 0; right: 0; bottom: 0; width: 240px;
+    background: rgba(10,14,26,0.98); border-left: 1px solid var(--border);
+    display: flex; flex-direction: column; padding: 24px 0;
+    backdrop-filter: blur(20px);
+  }
+  .main-content { margin-right: 240px; }
+}
+@media (max-width: 767px) {
+  .desktop-sidebar { display: none; }
+  .main-content { margin-right: 0; }
+}
+</style>
+</head>
+<body>
+<div class="bg-zellige"></div>
+
+<!-- ════════════════════ TOAST ════════════════════ -->
+<div id="toast">رسالة</div>
+
+<!-- ════════════════════ AUTH MODAL ════════════════════ -->
+<div id="authModal" class="overlay" onclick="if(event.target===this)closeModal()">
+  <div class="sheet card">
+    <div class="sheet-handle"></div>
+    <div class="flex justify-between items-center mb-6">
+      <div>
+        <h2 class="text-xl font-black grad-text" id="sheetTitle">تسجيل الدخول</h2>
+        <p class="text-xs muted mt-1">مجاني 100% — بدون بطاقة</p>
+      </div>
+      <button onclick="closeModal()" class="w-9 h-9 rounded-full btn-ghost flex items-center justify-center text-lg">✕</button>
+    </div>
+
+    <div class="tab-row mb-6">
+      <button class="tab-btn-sm active" id="tl" onclick="switchTab('login')">دخول</button>
+      <button class="tab-btn-sm" id="ts" onclick="switchTab('signup')">حساب جديد</button>
+    </div>
+
+    <form id="authForm" onsubmit="doAuth(event)" class="space-y-4">
+      <div id="fName" class="hidden">
+        <label class="field-label">الاسم</label>
+        <input type="text" id="iName" class="field" placeholder="أمين بنعلي"/>
+      </div>
+      <div>
+        <label class="field-label">البريد الإلكتروني</label>
+        <input type="email" id="iEmail" class="field" placeholder="you@example.com" required/>
+      </div>
+      <div>
+        <label class="field-label">كلمة المرور</label>
+        <input type="password" id="iPass" class="field" placeholder="••••••••" required/>
+      </div>
+      <div id="fRef" class="hidden">
+        <label class="field-label">كود إحالة (اختياري)</label>
+        <input type="text" id="iRef" class="field" placeholder="REF-XXXXXX"/>
+      </div>
+      <button type="submit" id="authBtn" class="btn btn-teal btn-full text-base mt-2">
+        <span id="authBtnLbl">تسجيل الدخول</span>
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- ════════════════════ DESKTOP SIDEBAR ════════════════════ -->
+<div class="desktop-sidebar" id="desktopSidebar">
+  <div class="px-6 mb-8">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-xl flex items-center justify-center text-xl font-black" style="background:linear-gradient(135deg,var(--teal),var(--gold))">ر</div>
+      <span class="text-lg font-black grad-text">ربحي</span>
+    </div>
+  </div>
+  <div class="flex-1 px-3 space-y-1" id="sidebarItems">
+    <a href="index.html" class="flex items-center gap-3 px-4 py-3 rounded-14 text-sm font-700 transition-all" style="border-radius:12px;background:rgba(0,212,184,0.12);color:var(--teal);font-weight:700">
+      <span class="text-lg">📊</span> لوحة التحكم
+    </a>
+    <a href="settings.html" class="flex items-center gap-3 px-4 py-3 rounded-14 text-sm transition-all hover:bg-white/5" style="border-radius:12px;color:var(--muted);font-weight:600">
+      <span class="text-lg">⚙️</span> الإعدادات
+    </a>
+    <a href="rewards.html" class="flex items-center gap-3 px-4 py-3 rounded-14 text-sm transition-all hover:bg-white/5" style="border-radius:12px;color:var(--muted);font-weight:600">
+      <span class="text-lg">🎁</span> المكافآت
+    </a>
+  </div>
+  <div class="px-6 mt-4">
+    <div id="sdkTokens" class="token-chip w-full justify-center mb-4">🪙 — رصيد</div>
+    <div id="sdkUserInfo" class="text-xs muted text-center mb-3 truncate"></div>
+    <button id="sdkAuthBtn" onclick="openModal()" class="btn btn-ghost btn-full text-sm py-2">دخول / تسجيل</button>
+    <button id="sdkSignOut" onclick="doSignOut()" class="btn btn-full text-sm py-2 mt-2 hidden" style="background:transparent;border:1px solid rgba(255,77,109,0.3);color:var(--red);border-radius:14px">خروج</button>
+  </div>
+</div>
+
+<!-- ════════════════════ MAIN CONTENT ════════════════════ -->
+<div class="main-content relative z-10">
+
+  <!-- TOP BAR -->
+  <div class="top-bar">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 rounded-10 flex items-center justify-center font-black text-sm" style="background:linear-gradient(135deg,var(--teal),var(--gold));border-radius:10px">ر</div>
+      <span class="font-black text-base grad-text">ربحي</span>
+    </div>
+    <div class="flex items-center gap-3">
+      <div class="token-chip" id="topTokenChip">🪙 — رصيد</div>
+      <div class="w-8 h-8 rounded-full flex items-center justify-center font-black text-sm cursor-pointer" style="background:linear-gradient(135deg,var(--teal),var(--gold));color:#0A0E1A" id="topAvatar" onclick="currentUser ? null : openModal()">؟</div>
+    </div>
+  </div>
+
+  <!-- ─── DASHBOARD VIEW ─── -->
+  <div id="dashView" class="px-4 py-5 space-y-5">
+
+    <!-- Greeting -->
+    <div class="fade-up d1">
+      <p class="text-xs muted font-600">مرحباً،</p>
+      <h1 class="text-2xl font-black" id="greetName">التاجر المغربي 👋</h1>
+    </div>
+
+    <!-- 4 Stat Cards -->
+    <div class="grid grid-cols-2 gap-3 fade-up d2">
+      <div class="card stat-card c-teal">
+        <div class="stat-icon c-teal">💰</div>
+        <div class="stat-num teal" id="s-profit">—</div>
+        <div class="stat-lbl">الربح الصافي (د.م.)</div>
+      </div>
+      <div class="card stat-card c-gold">
+        <div class="stat-icon c-gold">📈</div>
+        <div class="stat-num gold" id="s-roi">—</div>
+        <div class="stat-lbl">العائد على الاستثمار</div>
+      </div>
+      <div class="card stat-card c-blue">
+        <div class="stat-icon c-blue">🚚</div>
+        <div class="stat-num" style="color:#60A5FA" id="s-delivery">—</div>
+        <div class="stat-lbl">نسبة التسليم الناجح</div>
+      </div>
+      <div class="card stat-card c-red" style="cursor:pointer" onclick="currentUser ? null : openModal()">
+        <div class="stat-icon c-red">🪙</div>
+        <div class="stat-num" style="color:var(--gold)" id="s-tokens">—</div>
+        <div class="stat-lbl">رصيد الاستشارات</div>
+      </div>
+    </div>
+
+    <!-- Health bar -->
+    <div class="card p-4 fade-up d3">
+      <div class="flex justify-between items-center mb-3">
+        <span class="text-sm font-700">صحة الربحية</span>
+        <span class="text-xs font-800" id="healthLbl" style="color:var(--muted)">— احسب أولاً</span>
+      </div>
+      <div class="health-bar">
+        <div class="health-fill" id="healthFill" style="width:0%;background:linear-gradient(90deg,var(--red),var(--gold),var(--teal))"></div>
+      </div>
+    </div>
+
+    <!-- Quick Calc Button -->
+    <button class="btn btn-teal btn-full py-4 text-base fade-up d4" onclick="showCalc()">
+      🧮 احسب منتجاً جديداً
+    </button>
+
+    <!-- Last result summary (hidden until calc done) -->
+    <div id="lastResult" class="hidden fade-up d5">
+      <div class="card p-4">
+        <div class="flex justify-between items-center mb-4">
+          <span class="text-sm font-700">آخر حساب</span>
+          <span class="text-xs muted" id="lastProd">—</span>
+        </div>
+        <div id="breakTable" class="space-y-2 text-sm"></div>
+      </div>
+    </div>
+
+    <!-- Chart -->
+    <div id="chartWrap" class="hidden card p-4 fade-up d6">
+      <p class="text-sm font-700 mb-4">توزيع التكاليف</p>
+      <div style="height:220px;position:relative">
+        <canvas id="costChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Not logged in prompt -->
+    <div id="guestPrompt" class="card p-6 text-center fade-up d5">
+      <div class="text-4xl mb-3">🔐</div>
+      <h3 class="font-800 text-base mb-2">سجّل دخولك لحفظ نتائجك</h3>
+      <p class="text-xs muted mb-5 leading-relaxed">البيانات محفوظة آمناً في Supabase. مجاناً إلى الأبد.</p>
+      <button class="btn btn-teal btn-full" onclick="openModal()">ابدأ مجاناً</button>
+    </div>
+
+  </div>
+
+  <!-- ─── CALCULATOR VIEW ─── -->
+  <div id="calcView" class="hidden px-4 py-5 space-y-5">
+
+    <div class="flex items-center gap-3 mb-2">
+      <button onclick="showDash()" class="w-9 h-9 rounded-full btn-ghost flex items-center justify-center text-lg" style="font-size:20px">←</button>
+      <div>
+        <h2 class="text-xl font-black">الحاسبة</h2>
+        <p class="text-xs muted">البيانات الافتراضية محمّلة من الإعدادات</p>
+      </div>
+    </div>
+
+    <!-- Product & Pricing -->
+    <div class="card p-5">
+      <p class="text-sm font-800 mb-4 flex items-center gap-2"><span>📦</span> بيانات المنتج</p>
+      <div class="space-y-4">
+        <div>
+          <label class="field-label">اسم المنتج</label>
+          <input type="text" id="cProdName" class="field" placeholder="مثال: جاكيت شتوي"/>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="field-label">سعر الشراء (د.م.)</label>
+            <input type="number" id="cCost" class="field" placeholder="80" value="80" min="0" step="0.5" inputmode="decimal" oninput="liveCalc()"/>
+          </div>
+          <div>
+            <label class="field-label">الكمية</label>
+            <input type="number" id="cQty" class="field" placeholder="100" value="100" min="1" inputmode="numeric" oninput="liveCalc()"/>
+          </div>
+        </div>
+        <div>
+          <label class="field-label">هامش الربح المستهدف (%)</label>
+          <div class="flex items-center gap-3">
+            <input type="range" id="cMargin" min="5" max="80" value="30" oninput="document.getElementById('cMarginLbl').textContent=this.value+'%'; liveCalc()" class="flex-1"/>
+            <span class="font-800 w-12 text-center teal" id="cMarginLbl">30%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Costs (loaded from defaults) -->
+    <div class="card p-5">
+      <div class="flex justify-between items-center mb-4">
+        <p class="text-sm font-800 flex items-center gap-2"><span>🚚</span> التكاليف التشغيلية</p>
+        <button onclick="window.location.href='settings.html'" class="text-xs teal font-700">تعديل الافتراضي ←</button>
+      </div>
+      <div class="space-y-3">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="field-label">الشحن (د.م.)</label>
+            <input type="number" id="cShip" class="field" value="25" min="0" step="0.5" inputmode="decimal" oninput="liveCalc()"/>
+          </div>
+          <div>
+            <label class="field-label">التعبئة (د.م.)</label>
+            <input type="number" id="cPack" class="field" value="5" min="0" step="0.5" inputmode="decimal" oninput="liveCalc()"/>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="field-label">التسويق (د.م.)</label>
+            <input type="number" id="cMktg" class="field" value="15" min="0" step="0.5" inputmode="decimal" oninput="liveCalc()"/>
+          </div>
+          <div>
+            <label class="field-label">أخرى (د.م.)</label>
+            <input type="number" id="cOther" class="field" value="0" min="0" step="0.5" inputmode="decimal" oninput="liveCalc()"/>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tax & Returns -->
+    <div class="card p-5">
+      <p class="text-sm font-800 mb-4 flex items-center gap-2"><span>⚖️</span> الضرائب والمرتجعات</p>
+      <div class="space-y-4">
+        <!-- TVA -->
+        <div>
+          <div class="flex justify-between mb-2">
+            <label class="field-label mb-0">ضريبة TVA</label>
+            <span class="text-sm font-800 teal" id="cTvaLbl">20%</span>
+          </div>
+          <div class="tab-row" id="tvaRow">
+            <button class="tab-btn-sm" onclick="setTVA(0,this)">0%</button>
+            <button class="tab-btn-sm" onclick="setTVA(7,this)">7%</button>
+            <button class="tab-btn-sm" onclick="setTVA(10,this)">10%</button>
+            <button class="tab-btn-sm" onclick="setTVA(14,this)">14%</button>
+            <button class="tab-btn-sm active" onclick="setTVA(20,this)">20%</button>
+          </div>
+        </div>
+        <!-- Return rate -->
+        <div>
+          <div class="flex justify-between mb-2">
+            <label class="field-label mb-0">معدل المرتجعات (COD)</label>
+            <span class="text-sm font-800" id="cRetLbl" style="color:var(--red)">15%</span>
+          </div>
+          <input type="range" id="cRet" min="0" max="60" value="15" step="1" oninput="onRetSlide(this.value)"/>
+          <div class="flex justify-between text-10 muted mt-1" style="font-size:10px">
+            <span>ممتاز 0-10%</span><span>متوسط 10-30%</span><span>عالٍ +30%</span>
+          </div>
+        </div>
+        <!-- Return cost -->
+        <div>
+          <div class="flex justify-between mb-2">
+            <label class="field-label mb-0">تكلفة الإرجاع الواحد (د.م.)</label>
+            <span class="text-sm font-800 muted" id="cRetCostLbl">20</span>
+          </div>
+          <input type="range" id="cRetCost" min="0" max="80" value="20" step="5" oninput="document.getElementById('cRetCostLbl').textContent=this.value; liveCalc()"/>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Preview -->
+    <div class="card p-4" id="livePreview">
+      <p class="text-xs muted mb-3 font-600">معاينة فورية</p>
+      <div class="grid grid-cols-3 gap-3 text-center">
+        <div>
+          <div class="text-xs muted mb-1">تكلفة الوحدة</div>
+          <div class="font-900 text-base" id="lpCost">—</div>
+        </div>
+        <div style="border-right:1px solid var(--border);border-left:1px solid var(--border)">
+          <div class="text-xs muted mb-1">سعر البيع المقترح</div>
+          <div class="font-900 text-base teal" id="lpSuggest">—</div>
+        </div>
+        <div>
+          <div class="text-xs muted mb-1">الهامش</div>
+          <div class="font-900 text-base" id="lpMargin" style="color:var(--gold)">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Calculate Button -->
+    <button class="btn btn-gold btn-full py-4 text-base" onclick="doCalculate()">
+      ✨ احسب وأرني النتائج
+    </button>
+
+    <!-- Results Section -->
+    <div id="resultsSection" class="hidden space-y-4">
+
+      <!-- Price Interval -->
+      <div class="ai-card">
+        <div class="text-xs font-700 muted mb-3">💡 توصية سعرية</div>
+        <div class="price-interval" id="priceIntervalBox">
+          <div class="label">النطاق السعري الموصى به</div>
+          <div class="range" id="priceIntervalVal">--- د.م.</div>
+        </div>
+        <div id="aiText" class="text-sm leading-relaxed" style="color:rgba(232,240,255,0.8); line-height:1.9"></div>
+        <div id="aiLoading" class="hidden text-center py-4">
+          <div class="dots mb-2"><span></span><span></span><span></span></div>
+          <div class="text-xs muted">Llama 3 يحلل أرقامك...</div>
+        </div>
+        <div class="flex justify-between items-center mt-4 pt-3" style="border-top:1px solid rgba(0,212,184,0.12)">
+          <button class="btn btn-ghost py-2 px-4 text-xs" onclick="getAI()">🔄 تحليل جديد <span class="token-chip" style="font-size:10px;padding:2px 8px">1 🪙</span></button>
+          <button class="btn btn-ghost py-2 px-3 text-xs" onclick="copyAI()">نسخ 📋</button>
+        </div>
+      </div>
+
+      <!-- Breakdown -->
+      <div class="card p-4">
+        <p class="text-sm font-800 mb-4">📋 التفصيل الكامل</p>
+        <div id="breakdownList" class="space-y-2"></div>
+      </div>
+
+      <!-- Chart -->
+      <div class="card p-4">
+        <p class="text-sm font-700 mb-4">توزيع التكاليف</p>
+        <div style="height:200px;position:relative">
+          <canvas id="donutChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div><!-- /main-content -->
+
+<!-- ════════════════════ BOTTOM NAV ════════════════════ -->
+<nav class="bottom-nav md:hidden">
+  <a href="index.html" class="nav-item active">
+    <div class="nav-icon">📊</div>
+    <span>الرئيسية</span>
+  </a>
+  <button class="nav-item" onclick="showCalc()" style="background:none;border:none;font-family:'Cairo',sans-serif">
+    <div class="nav-icon">🧮</div>
+    <span>الحاسبة</span>
+  </button>
+  <a href="settings.html" class="nav-item">
+    <div class="nav-icon">⚙️</div>
+    <span>الإعدادات</span>
+  </a>
+  <a href="rewards.html" class="nav-item">
+    <div class="nav-icon">🎁</div>
+    <span>المكافآت</span>
+  </a>
+</nav>
+
+<!-- ════════════════════ SCRIPT ════════════════════ -->
+<script>
+// ══════════════════════════════════════════
+// ⚙️  CONFIG — Replace with your actual keys
+// ══════════════════════════════════════════
+const SUPABASE_URL  = 'https://YOUR_PROJECT.supabase.co';
+const SUPABASE_ANON = 'YOUR_ANON_KEY';
+const GROQ_API_KEY  = 'YOUR_GROQ_API_KEY';
+
+// ══════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON);
+
+let currentUser    = null;
+let userProfile    = null;
+let userTokens     = 0;
+let tvaVal         = 20;
+let calcData       = null;
+let donutChartInst = null;
+
+// Load defaults from localStorage on startup
+document.addEventListener('DOMContentLoaded', () => {
+  loadDefaults();
+  sb.auth.onAuthStateChange(async (evt, session) => {
+    currentUser = session?.user || null;
+    if (currentUser) {
+      await fetchProfile();
+      updateAuthUI(true);
+    } else {
+      updateAuthUI(false);
+    }
+  });
+  // Check URL ref
+  const ref = new URLSearchParams(location.search).get('ref');
+  if (ref) { document.getElementById('iRef').value = ref; switchTab('signup'); }
+});
+
+// ── Load defaults from localStorage ──
+function loadDefaults() {
+  const d = JSON.parse(localStorage.getItem('ribhi_settings') || '{}');
+  if (d.ship)   document.getElementById('cShip').value  = d.ship;
+  if (d.pack)   document.getElementById('cPack').value  = d.pack;
+  if (d.mktg)   document.getElementById('cMktg').value  = d.mktg;
+  if (d.tva != null) {
+    tvaVal = d.tva;
+    document.getElementById('cTvaLbl').textContent = d.tva + '%';
+    document.querySelectorAll('#tvaRow .tab-btn-sm').forEach(b => {
+      b.classList.toggle('active', b.textContent.trim() === d.tva + '%');
+    });
+  }
+  liveCalc();
+}
+
+// ══════════════════════════════════════════
+// AUTH
+// ══════════════════════════════════════════
+let authTab = 'login';
+function openModal() { document.getElementById('authModal').classList.add('open'); }
+function closeModal() { document.getElementById('authModal').classList.remove('open'); }
+
+function switchTab(tab) {
+  authTab = tab;
+  const isS = tab === 'signup';
+  document.getElementById('tl').classList.toggle('active', !isS);
+  document.getElementById('ts').classList.toggle('active', isS);
+  document.getElementById('fName').classList.toggle('hidden', !isS);
+  document.getElementById('fRef').classList.toggle('hidden', !isS);
+  document.getElementById('sheetTitle').textContent = isS ? 'إنشاء حساب' : 'تسجيل الدخول';
+  document.getElementById('authBtnLbl').textContent  = isS ? 'إنشاء الحساب' : 'دخول';
+}
+
+async function doAuth(e) {
+  e.preventDefault();
+  const email = document.getElementById('iEmail').value.trim();
+  const pass  = document.getElementById('iPass').value;
+  const name  = document.getElementById('iName').value.trim();
+  const ref   = document.getElementById('iRef').value.trim();
+  const btn   = document.getElementById('authBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="dots"><span></span><span></span><span></span></div>';
+  try {
+    if (authTab === 'signup') {
+      const { data, error } = await sb.auth.signUp({ email, password: pass, options: { data: { full_name: name } } });
+      if (error) throw error;
+      if (data.user) {
+        const code = 'REF-' + data.user.id.slice(0,6).toUpperCase();
+        await sb.from('profiles').insert({ id: data.user.id, email, full_name: name || email.split('@')[0], tokens: 100, referral_code: code, referred_by: ref || null });
+        if (ref) await sb.rpc('reward_referral', { ref_code: ref, new_user_id: data.user.id });
+      }
+      toast('🎉 تم! تحقق من بريدك الإلكتروني');
+    } else {
+      const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+      if (error) throw error;
+      toast('👋 أهلاً بك!');
+    }
+    closeModal();
+  } catch (err) {
+    toast('❌ ' + (err.message || 'خطأ في البيانات'), true);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<span id="authBtnLbl">' + (authTab === 'login' ? 'دخول' : 'إنشاء الحساب') + '</span>';
+  }
+}
+
+async function doSignOut() {
+  await sb.auth.signOut();
+  currentUser = null; userProfile = null; userTokens = 0;
+  updateAuthUI(false);
+  toast('👋 تم تسجيل الخروج');
+}
+
+// ══════════════════════════════════════════
+// PROFILE
+// ══════════════════════════════════════════
+async function fetchProfile() {
+  const { data } = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
+  if (data) {
+    userProfile = data;
+    userTokens  = data.tokens || 0;
+  } else {
+    userTokens = 0;
+  }
+  refreshStats();
+}
+
+function updateAuthUI(loggedIn) {
+  const name = userProfile?.full_name || currentUser?.email?.split('@')[0] || '';
+  document.getElementById('greetName').textContent = loggedIn ? (name + ' 👋') : 'التاجر المغربي 👋';
+  document.getElementById('guestPrompt').classList.toggle('hidden', loggedIn);
+  document.getElementById('topAvatar').textContent = loggedIn ? (name.charAt(0).toUpperCase() || '?') : '?';
+  document.getElementById('sdkAuthBtn').classList.toggle('hidden', loggedIn);
+  document.getElementById('sdkSignOut').classList.toggle('hidden', !loggedIn);
+  document.getElementById('sdkUserInfo').textContent = loggedIn ? (currentUser?.email || '') : '';
+  refreshStats();
+}
+
+function refreshStats() {
+  const tokens = currentUser ? userTokens : '—';
+  document.getElementById('s-tokens').textContent    = tokens;
+  document.getElementById('topTokenChip').innerHTML  = '🪙 ' + tokens + ' رصيد';
+  document.getElementById('sdkTokens').innerHTML     = '🪙 ' + tokens + ' رصيد';
+}
+
+// ══════════════════════════════════════════
+// VIEWS
+// ══════════════════════════════════════════
+function showDash() {
+  document.getElementById('dashView').classList.remove('hidden');
+  document.getElementById('calcView').classList.add('hidden');
+}
+function showCalc() {
+  document.getElementById('dashView').classList.add('hidden');
+  document.getElementById('calcView').classList.remove('hidden');
+  liveCalc();
+}
+
+// ══════════════════════════════════════════
+// TVA
+// ══════════════════════════════════════════
+function setTVA(v, btn) {
+  tvaVal = v;
+  document.getElementById('cTvaLbl').textContent = v + '%';
+  document.querySelectorAll('#tvaRow .tab-btn-sm').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  liveCalc();
+}
+
+function onRetSlide(v) {
+  const lbl = document.getElementById('cRetLbl');
+  lbl.textContent = v + '%';
+  lbl.style.color = v < 10 ? 'var(--teal)' : v < 25 ? 'var(--gold)' : 'var(--red)';
+  liveCalc();
+}
+
+// ══════════════════════════════════════════
+// LIVE CALCULATOR (instant preview)
+// ══════════════════════════════════════════
+function liveCalc() {
+  const cost    = parseFloat(document.getElementById('cCost').value) || 0;
+  const ship    = parseFloat(document.getElementById('cShip').value) || 0;
+  const pack    = parseFloat(document.getElementById('cPack').value) || 0;
+  const mktg    = parseFloat(document.getElementById('cMktg').value) || 0;
+  const other   = parseFloat(document.getElementById('cOther').value) || 0;
+  const margin  = parseInt(document.getElementById('cMargin').value) || 30;
+  const retRate = parseFloat(document.getElementById('cRet').value) / 100 || 0;
+  const retCost = parseFloat(document.getElementById('cRetCost').value) || 0;
+
+  // Total cost per sold unit (accounting for returns: every "retRate" unit costs extra)
+  const totalCostPerUnit = cost + ship + pack + mktg + other + (retCost * retRate);
+  const tvaFactor = 1 - (tvaVal / 100);
+
+  // Suggested price to hit target margin:
+  // netRevenue = salePrice * tvaFactor
+  // profit = netRevenue - totalCostPerUnit = margin% * netRevenue
+  // → salePrice = totalCostPerUnit / (tvaFactor * (1 - margin/100))
+  const denominator = tvaFactor * (1 - margin / 100);
+  const suggestedPrice = denominator > 0 ? totalCostPerUnit / denominator : 0;
+
+  document.getElementById('lpCost').textContent    = totalCostPerUnit.toFixed(1) + ' د.م.';
+  document.getElementById('lpSuggest').textContent = suggestedPrice > 0 ? Math.ceil(suggestedPrice) + ' د.م.' : '—';
+  document.getElementById('lpMargin').textContent  = margin + '%';
+}
+
+// ══════════════════════════════════════════
+// MAIN CALCULATE (full risk-adjusted)
+// ══════════════════════════════════════════
+function doCalculate() {
+  const prodName  = document.getElementById('cProdName').value || 'منتج';
+  const cost      = parseFloat(document.getElementById('cCost').value)    || 0;
+  const qty       = parseInt(document.getElementById('cQty').value)       || 1;
+  const ship      = parseFloat(document.getElementById('cShip').value)    || 0;
+  const pack      = parseFloat(document.getElementById('cPack').value)    || 0;
+  const mktg      = parseFloat(document.getElementById('cMktg').value)    || 0;
+  const other     = parseFloat(document.getElementById('cOther').value)   || 0;
+  const margin    = parseInt(document.getElementById('cMargin').value)    || 30;
+  const retRate   = parseFloat(document.getElementById('cRet').value) / 100 || 0;
+  const retCost   = parseFloat(document.getElementById('cRetCost').value) || 0;
+  const tvaPct    = tvaVal / 100;
+
+  // ── Risk-Adjusted Math ──
+  const soldUnits    = qty * (1 - retRate);
+  const retUnits     = qty * retRate;
+
+  // Cost per sold unit (you pay for all units but only sell some)
+  const totalGoods   = cost * qty;
+  const totalShip    = ship * qty;
+  const totalPack    = pack * qty;
+  const totalMktg    = mktg * soldUnits;   // marketing only on actual sold
+  const totalOther   = other * qty;
+  const totalReturn  = retCost * retUnits;
+  const totalCosts   = totalGoods + totalShip + totalPack + totalMktg + totalOther + totalReturn;
+
+  // Suggested price (target margin)
+  const costPerSold  = soldUnits > 0 ? totalCosts / soldUnits : 0;
+  const tvaFactor    = 1 - tvaPct;
+  const denom        = tvaFactor * (1 - margin / 100);
+  const suggestedMin = denom > 0 ? Math.ceil(costPerSold / denom) : 0;
+  // Upper bound: 15% above minimum
+  const suggestedMax = Math.ceil(suggestedMin * 1.15);
+
+  // Revenue at suggested MIN price
+  const revenueGross = suggestedMin * soldUnits;
+  const tvaAmount    = revenueGross * tvaPct;
+  const revenueNet   = revenueGross - tvaAmount;
+  const netProfit    = revenueNet - totalCosts;
+  const profitMargin = revenueNet > 0 ? (netProfit / revenueNet) * 100 : 0;
+  const roi          = totalCosts > 0 ? (netProfit / totalCosts) * 100 : 0;
+  const deliveryRate = (1 - retRate) * 100;
+
+  calcData = { prodName, cost, qty, ship, pack, mktg, other, retRate, retCost, tvaPct, tvaVal,
+    soldUnits, retUnits, totalGoods, totalShip, totalPack, totalMktg, totalOther, totalReturn,
+    totalCosts, revenueGross, tvaAmount, revenueNet, netProfit, profitMargin, roi, deliveryRate,
+    suggestedMin, suggestedMax, margin };
+
+  // ── Update UI ──
+  const fmt = n => Math.round(n).toLocaleString('ar-MA');
+
+  // Price interval
+  document.getElementById('priceIntervalVal').textContent = fmt(suggestedMin) + ' — ' + fmt(suggestedMax) + ' د.م.';
+
+  // Breakdown list
+  const lines = [
+    ['إجمالي البضاعة',   -totalGoods,  'var(--red)'],
+    ['تكلفة الشحن',      -totalShip,   'var(--red)'],
+    ['التعبئة',          -totalPack,   'var(--red)'],
+    ['التسويق',          -totalMktg,   'var(--red)'],
+    ['خسارة المرتجعات',  -totalReturn, 'var(--red)'],
+    ['TVA (' + tvaVal + '%)', -tvaAmount,'#60A5FA'],
+    ['تكاليف أخرى',      -totalOther,  'var(--red)'],
+    ['الإيراد الصافي',    revenueNet,  'var(--teal)'],
+  ];
+  const breakDiv = document.getElementById('breakdownList');
+  breakDiv.innerHTML = lines.map(([lbl, val, col]) => `
+    <div class="flex justify-between items-center py-2" style="border-bottom:1px solid var(--border)">
+      <span class="text-sm" style="color:rgba(232,240,255,0.7)">${lbl}</span>
+      <span class="font-800 text-sm" style="color:${col}">${val >= 0 ? '+' : ''}${Math.round(Math.abs(val)).toLocaleString('ar-MA')} د.م.</span>
+    </div>`).join('') + `
+    <div class="flex justify-between items-center pt-3">
+      <span class="font-800">🏁 الربح الصافي</span>
+      <span class="font-900 text-base" style="color:${netProfit >= 0 ? 'var(--teal)' : 'var(--red)'}">
+        ${netProfit >= 0 ? '+' : ''}${fmt(netProfit)} د.م.
+      </span>
+    </div>`;
+
+  // Dashboard stats
+  document.getElementById('s-profit').textContent   = fmt(netProfit) + ' د.م.';
+  document.getElementById('s-profit').style.color   = netProfit >= 0 ? 'var(--teal)' : 'var(--red)';
+  document.getElementById('s-roi').textContent      = roi.toFixed(1) + '%';
+  document.getElementById('s-delivery').textContent = deliveryRate.toFixed(0) + '%';
+
+  // Health bar
+  const health = Math.max(0, Math.min(100, profitMargin * 2));
+  document.getElementById('healthFill').style.width = health + '%';
+  const labels = profitMargin >= 30 ? ['ممتاز 🌟','var(--teal)'] : profitMargin >= 15 ? ['جيد ✅','#7ee787'] : profitMargin >= 0 ? ['مقبول ⚠️','var(--gold)'] : ['خسارة ❌','var(--red)'];
+  document.getElementById('healthLbl').textContent = labels[0];
+  document.getElementById('healthLbl').style.color  = labels[1];
+
+  // Last result
+  document.getElementById('lastProd').textContent = prodName;
+  document.getElementById('breakTable').innerHTML = `
+    <div class="flex justify-between text-sm py-1"><span class="muted">سعر البيع المقترح</span><span class="teal font-800">${fmt(suggestedMin)} — ${fmt(suggestedMax)} د.م.</span></div>
+    <div class="flex justify-between text-sm py-1"><span class="muted">الربح الصافي</span><span style="color:${netProfit>=0?'var(--teal)':'var(--red)'}; font-weight:800">${fmt(netProfit)} د.م.</span></div>
+    <div class="flex justify-between text-sm py-1"><span class="muted">ROI</span><span class="gold font-800">${roi.toFixed(1)}%</span></div>`;
+  document.getElementById('lastResult').classList.remove('hidden');
+
+  // Donut chart
+  buildDonut(totalGoods, totalShip, totalPack, totalMktg, totalReturn, tvaAmount, Math.max(0, netProfit));
+
+  // Show results, go back to dash for overview
+  document.getElementById('resultsSection').classList.remove('hidden');
+  document.getElementById('resultsSection').scrollIntoView({ behavior:'smooth', block:'start' });
+
+  // Auto-trigger AI
+  getAI();
+}
+
+// ══════════════════════════════════════════
+// DONUT CHART
+// ══════════════════════════════════════════
+function buildDonut(goods, ship, pack, mktg, ret, tva, profit) {
+  const ctx = document.getElementById('donutChart').getContext('2d');
+  if (donutChartInst) { donutChartInst.destroy(); }
+  donutChartInst = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['البضاعة','الشحن','التعبئة','التسويق','المرتجعات','TVA','الربح'],
+      datasets: [{ data: [goods,ship,pack,mktg,ret,tva,profit].map(Math.abs),
+        backgroundColor: ['#ef4444','#f97316','#eab308','#a855f7','#ff4d6d','#60a5fa','#00d4b8'],
+        borderWidth: 0, hoverOffset: 6 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position:'right', labels:{ color:'#6B7A99', font:{ family:'Cairo', size:10 }, padding:8, boxWidth:10 } },
+        tooltip: { callbacks: { label: c => ' ' + c.label + ': ' + Math.round(c.raw).toLocaleString() + ' د.م.' } }
+      },
+      cutout: '62%'
+    }
+  });
+}
+
+// ══════════════════════════════════════════
+// AI ADVICE (Groq — Llama 3 70b)
+// ══════════════════════════════════════════
+async function getAI() {
+  if (!calcData) return;
+  if (!currentUser) { toast('🔐 سجّل دخولك للحصول على التوصية الذكية'); return; }
+  if (userTokens <= 0) { toast('🪙 رصيدك نفذ! ادعُ أصدقاءك للحصول على المزيد', true); return; }
+
+  const d = calcData;
+  document.getElementById('aiText').textContent = '';
+  document.getElementById('aiLoading').classList.remove('hidden');
+
+  const systemPrompt = `أنت مستشار تجارة إلكترونية متخصص في السوق المغربي (COD - الدفع عند الاستلام).
+مهمتك: تحليل أرقام التاجر وتقديم توصيات **قابلة للتطبيق فوراً** بالأرقام المحددة.
+الأسلوب: عربي مهني موجز، فقرات قصيرة، لا مقدمات، لا كلام عام.
+IMPORTANT: يجب أن تبدأ دائماً بسطر يذكر النطاق السعري الموصى به بهذا الشكل بالضبط:
+"💰 النطاق السعري الموصى به: [X] — [Y] درهم"`;
+
+  const userMsg = `بيانات المنتج: ${d.prodName}
+- سعر الشراء: ${d.cost} د.م. | الكمية: ${d.qty} وحدة
+- تكاليف/وحدة: شحن ${d.ship} + تعبئة ${d.pack} + تسويق ${d.mktg} + أخرى ${d.other}
+- TVA: ${d.tvaVal}% | معدل المرتجعات: ${(d.retRate*100).toFixed(0)}% | تكلفة الإرجاع: ${d.retCost} د.م.
+- الوحدات المباعة فعلاً: ${Math.round(d.soldUnits)} من ${d.qty}
+- إجمالي التكاليف: ${Math.round(d.totalCosts)} د.م.
+- الربح الصافي عند السعر المقترح (${d.suggestedMin} د.م.): ${Math.round(d.netProfit)} د.م.
+- ROI: ${d.roi.toFixed(1)}% | هامش الربح: ${d.profitMargin.toFixed(1)}% | نسبة التسليم: ${d.deliveryRate.toFixed(0)}%
+
+المطلوب:
+1. سطر النطاق السعري (إلزامي كما في التعليمات)
+2. أهم 2 مشاكل في الأرقام
+3. 2 خطوات عملية لرفع الربحية
+4. سعر التعادل الدقيق (BEP) بالدرهم`;
+
+  try {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + GROQ_API_KEY },
+      body: JSON.stringify({
+        model: 'llama3-70b-8192',
+        messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userMsg }],
+        max_tokens: 500, temperature: 0.65
+      })
+    });
+    if (!res.ok) throw new Error('Groq ' + res.status);
+    const json   = await res.json();
+    const advice = json.choices?.[0]?.message?.content || 'تعذّر الحصول على توصية.';
+
+    // Extract price interval from AI response if present
+    const match = advice.match(/النطاق السعري الموصى به:\s*([\d٠-٩]+)\s*[—–-]\s*([\d٠-٩]+)/);
+    if (match) {
+      document.getElementById('priceIntervalVal').textContent = match[1] + ' — ' + match[2] + ' درهم';
+    }
+
+    document.getElementById('aiText').textContent = advice;
+
+    // Deduct token
+    userTokens = Math.max(0, userTokens - 1);
+    await sb.from('profiles').update({ tokens: userTokens }).eq('id', currentUser.id);
+    await sb.from('token_usage').insert({ user_id: currentUser.id, action: 'ai_advice', product_name: d.prodName, tokens_used: 1 });
+    refreshStats();
+
+  } catch (err) {
+    document.getElementById('aiText').textContent = '⚠️ تعذّر الاتصال. تحقق من مفتاح Groq API.';
+    console.error(err);
+  } finally {
+    document.getElementById('aiLoading').classList.add('hidden');
+  }
+}
+
+function copyAI() {
+  navigator.clipboard.writeText(document.getElementById('aiText').textContent)
+    .then(() => toast('✅ تم نسخ التوصية'));
+}
+
+// ══════════════════════════════════════════
+// TOAST
+// ══════════════════════════════════════════
+let _toastTimer;
+function toast(msg, err = false) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.borderColor = err ? 'rgba(255,77,109,0.4)' : 'rgba(0,212,184,0.3)';
+  el.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove('show'), 3200);
+}
+</script>
+</body>
+</html>
